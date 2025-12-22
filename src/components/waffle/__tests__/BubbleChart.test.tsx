@@ -29,7 +29,7 @@ vi.mock('@visx/tooltip', async () => {
   return {
     ...actual,
     useTooltipInPortal: () => ({
-      containerRef: (node: any) => { },
+      containerRef: (_node: any) => { },
       TooltipInPortal: ({ children }: { children: React.ReactNode }) => {
         return <div>{children}</div>;
       },

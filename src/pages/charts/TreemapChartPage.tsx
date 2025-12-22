@@ -1,4 +1,4 @@
-import { TreemapChart, TreemapData } from "../../components/waffle/TreemapChart";
+import { TreemapChart, type TreemapData } from "../../components/waffle/TreemapChart";
 import { ComponentPreview } from "../../components/ComponentPreview";
 
 const mockData: TreemapData = {
