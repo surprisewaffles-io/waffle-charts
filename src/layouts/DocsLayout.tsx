@@ -13,6 +13,7 @@ const sidebarItems = [
   { title: "Scatter Plot", path: "/docs/scatter-chart" },
   { title: "Heatmap", path: "/docs/heatmap" },
   { title: "Treemap", path: "/docs/treemap" },
+  { title: "Sankey Diagram", path: "/docs/sankey-chart" },
   { title: "Bubble Chart", path: "/docs/bubble-chart" },
 ];
 

@@ -43,5 +43,10 @@ export const registry = {
     file: "ScatterChart.tsx",
     label: "Scatter Chart",
     dependencies: ["@visx/shape", "@visx/group", "@visx/responsive", "@visx/tooltip", "@visx/scale", "@visx/axis", "@visx/grid", "@visx/glyph", "clsx", "tailwind-merge"],
+  },
+  "sankey-chart": {
+    file: "SankeyChart.tsx",
+    label: "Sankey Chart",
+    dependencies: ["@visx/sankey", "@visx/group", "@visx/responsive", "@visx/tooltip", "@visx/scale", "clsx", "tailwind-merge"],
   }
 };

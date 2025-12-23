@@ -8,6 +8,7 @@ import { ScatterChart } from '../components/waffle/ScatterChart';
 import { HeatmapChart } from '../components/waffle/HeatmapChart';
 import { TreemapChart } from '../components/waffle/TreemapChart';
 import { BubbleChart } from '../components/waffle/BubbleChart';
+import { SankeyChart } from '../components/waffle/SankeyChart';
 
 const barData = [
   { letter: 'A', frequency: 0.08167 },
@@ -81,6 +82,19 @@ const charts = [
   { name: "Bubble Chart", path: "/docs/bubble-chart", component: <BubbleChart data={bubbleData} xKey="x" yKey="y" zKey="z" /> },
   { name: "Heatmap", path: "/docs/heatmap", component: <HeatmapChart data={heatmapData} colorRange={['#f1f5f9', '#0f172a']} /> },
   { name: "Treemap", path: "/docs/treemap", component: <TreemapChart data={treemapData} /> },
+  {
+    name: "Sankey", path: "/docs/sankey-chart", component: <SankeyChart data={
+      // Simple sankey for gallery
+      {
+        nodes: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }],
+        links: [
+          { source: 0, target: 2, value: 50 },
+          { source: 1, target: 2, value: 30 },
+          { source: 2, target: 3, value: 80 }
+        ]
+      }
+    } />
+  },
 ];
 
 export function GalleryPage() {
