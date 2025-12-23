@@ -1,6 +1,6 @@
 {
   "name": "waffle-charts-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI to add WaffleCharts components to your project",
   "main": "bin/index.js",
   "bin": {
@@ -24,7 +24,8 @@
   "files": [
     "bin",
     "src",
-    "templates"
+    "templates",
+    "README.md"
   ],
   "publishConfig": {
     "access": "public"
