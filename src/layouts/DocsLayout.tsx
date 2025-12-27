@@ -15,6 +15,7 @@ const sidebarItems = [
   { title: "Treemap", path: "/docs/treemap" },
   { title: "Sankey Diagram", path: "/docs/sankey-chart" },
   { title: "Composite Chart", path: "/docs/composite-chart" },
+  { title: "Chord Diagram", path: "/docs/chord-chart" },
   { title: "Bubble Chart", path: "/docs/bubble-chart" },
 ];
 

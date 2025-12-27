@@ -53,5 +53,10 @@ export const registry = {
     file: "CompositeChart.tsx",
     label: "Composite Chart",
     dependencies: ["@visx/shape", "@visx/scale", "@visx/axis", "@visx/grid", "@visx/group", "@visx/responsive", "@visx/tooltip", "@visx/curve", "@visx/event", "clsx", "tailwind-merge"],
+  },
+  "chord-chart": {
+    file: "ChordChart.tsx",
+    label: "Chord Diagram",
+    dependencies: ["@visx/chord", "@visx/scale", "@visx/tooltip", "@visx/shape", "@visx/responsive", "@visx/group", "clsx", "tailwind-merge"],
   }
 };

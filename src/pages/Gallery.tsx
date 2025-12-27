@@ -10,6 +10,7 @@ import { TreemapChart } from '../components/waffle/TreemapChart';
 import { BubbleChart } from '../components/waffle/BubbleChart';
 import { SankeyChart } from '../components/waffle/SankeyChart';
 import { CompositeChart } from '../components/waffle/CompositeChart';
+import { ChordChart } from '../components/waffle/ChordChart';
 
 const barData = [
   { letter: 'A', frequency: 0.08167 },
@@ -103,6 +104,16 @@ const charts = [
         { m: 'D', v: 200, l: 10 }, { m: 'E', v: 450, l: 40 }
       ]}
       xKey="m" barKey="v" lineKey="l"
+    />
+  },
+  {
+    name: "Chord", path: "/docs/chord-chart", component: <ChordChart
+      data={[
+        [1197, 587, 891],
+        [195, 1004, 206],
+        [801, 1614, 809],
+      ]}
+      keys={['A', 'B', 'C']}
     />
   },
 ];
