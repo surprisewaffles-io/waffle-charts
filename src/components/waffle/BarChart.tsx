@@ -79,7 +79,7 @@ function BarChartContent<T>({
     scroll: true,
   });
 
-  if (width < 10) return null;
+  if (width < 10 || height < 100) return null;
 
   return (
     <div className={cn("relative", className)}>
@@ -156,7 +156,7 @@ function BarChartContent<T>({
 
 export const BarChart = <T,>(props: BarChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <BarChartContent {...props} width={width} height={height} />}
       </ParentSize>

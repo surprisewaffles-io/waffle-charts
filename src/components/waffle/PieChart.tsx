@@ -168,7 +168,7 @@ function PieChartContent<T>({
 
 export const PieChart = <T,>(props: PieChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <PieChartContent {...props} width={width} height={height} />}
       </ParentSize>
