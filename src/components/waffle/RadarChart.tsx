@@ -12,6 +12,7 @@ export type RadarChartProps<T> = {
   className?: string;
   gridColor?: string;
   polygonColor?: string;
+  color?: string; // Direct color value (hex, rgb) - applies to polygon fill/stroke
   width?: number;
   height?: number;
 };
@@ -29,7 +30,8 @@ function RadarChartContent<T>({
   angleKey,
   className,
   gridColor = "stroke-border",
-  polygonColor = "fill-primary",
+  polygonColor = "#a855f7",
+  color,
 }: RadarChartContentProps<T>) {
   const margin = { top: 40, right: 40, bottom: 40, left: 40 };
   const xMax = width - margin.left - margin.right;
@@ -130,10 +132,18 @@ function RadarChartContent<T>({
           })}
 
           {/* The Radar Polygon */}
-          <polygon
-            points={points.map(p => `${p.x},${p.y}`).join(' ')}
-            className={cn("stroke-primary stroke-2 fill-primary/20 hover:opacity-80 transition-opacity", polygonColor)}
-          />
+          {(() => {
+            const isHex = !color && (polygonColor.startsWith('#') || polygonColor.startsWith('rgb'));
+            return (
+              <polygon
+                points={points.map(p => `${p.x},${p.y}`).join(' ')}
+                fill={color ? `${color}33` : isHex ? `${polygonColor}33` : undefined}
+                stroke={color || (isHex ? polygonColor : undefined)}
+                strokeWidth={2}
+                className={cn(!color && !isHex && "stroke-primary stroke-2 fill-primary/20", "hover:opacity-80 transition-opacity", !color && !isHex && polygonColor)}
+              />
+            );
+          })()}
 
           {/* Dots on corners */}
           {points.map((p, i) => (
@@ -142,7 +152,10 @@ function RadarChartContent<T>({
               cx={p.x}
               cy={p.y}
               r={4}
-              className="fill-background stroke-primary stroke-2"
+              fill={color ? "white" : undefined}
+              stroke={color}
+              strokeWidth={color ? 2 : undefined}
+              className={cn(!color && "fill-background stroke-primary stroke-2")}
             />
           ))}
 
@@ -154,7 +167,7 @@ function RadarChartContent<T>({
 
 export const RadarChart = <T,>(props: RadarChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <RadarChartContent {...props} width={width} height={height} />}
       </ParentSize>

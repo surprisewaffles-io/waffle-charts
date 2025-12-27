@@ -165,9 +165,9 @@ function SankeyChartContent({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <span className="font-semibold block">{tooltipData.name}</span>
             <span className="text-xs text-muted-foreground">Value: {tooltipData.value}</span>
           </div>
@@ -179,7 +179,7 @@ function SankeyChartContent({
 
 export const SankeyChart = (props: SankeyChartProps) => {
   return (
-    <div className="w-full h-[400px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <SankeyChartContent {...props} width={width} height={height} />}
       </ParentSize>

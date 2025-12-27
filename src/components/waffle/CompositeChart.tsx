@@ -39,9 +39,20 @@ function CompositeChartContent<T>({
   barColor = '#3b82f6', // blue-500
   lineColor = '#ef4444', // red-500
 }: CompositeChartContentProps<T>) {
-  const margin = { top: 40, right: 50, bottom: 50, left: 50 };
-  const innerWidth = width - margin.left - margin.right;
-  const innerHeight = height - margin.top - margin.bottom;
+  // Adaptive margins that scale down for small containers
+  const baseMargin = { top: 40, right: 50, bottom: 50, left: 50 };
+  const margin = {
+    top: Math.min(baseMargin.top, height * 0.15),
+    right: Math.min(baseMargin.right, width * 0.1),
+    bottom: Math.min(baseMargin.bottom, height * 0.2),
+    left: Math.min(baseMargin.left, width * 0.1),
+  };
+
+  const innerWidth = Math.max(0, width - margin.left - margin.right);
+  const innerHeight = Math.max(0, height - margin.top - margin.bottom);
+
+  // Skip rendering if container is too small
+  if (innerWidth < 50 || innerHeight < 50) return null;
 
   // Accessors
   const getX = (d: T) => d[xKey] as unknown as string;
@@ -176,18 +187,18 @@ function CompositeChartContent<T>({
           <AxisBottom
             scale={xScale}
             top={innerHeight}
-            stroke="hsl(var(--muted-foreground))"
-            tickStroke="hsl(var(--muted-foreground))"
+            stroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
+            tickStroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
             tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
+              fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
               fontSize: 11,
               textAnchor: 'middle',
             }}
           />
           <AxisLeft
             scale={y1Scale}
-            stroke="hsl(var(--muted-foreground))"
-            tickStroke="hsl(var(--muted-foreground))"
+            stroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
+            tickStroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
             tickLabelProps={{
               fill: barColor, // Color match axis to data
               fontSize: 11,
@@ -199,8 +210,8 @@ function CompositeChartContent<T>({
           <AxisRight
             scale={y2Scale}
             left={innerWidth}
-            stroke="hsl(var(--muted-foreground))"
-            tickStroke="hsl(var(--muted-foreground))"
+            stroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
+            tickStroke="hsl(var(--muted-foreground, 215.4 16.3% 46.9%))"
             tickLabelProps={{
               fill: lineColor, // Color match axis to data
               fontSize: 11,
@@ -217,9 +228,9 @@ function CompositeChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <span className="font-semibold block mb-1">{tooltipData.x}</span>
             <div className="flex items-center gap-2 text-xs">
               <span className="w-2 h-2 rounded-full" style={{ background: barColor }}></span>
@@ -238,7 +249,7 @@ function CompositeChartContent<T>({
 
 export function CompositeChart<T>(props: CompositeChartProps<T>) {
   return (
-    <div className="w-full h-[400px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <CompositeChartContent {...props} width={width} height={height} />}
       </ParentSize>

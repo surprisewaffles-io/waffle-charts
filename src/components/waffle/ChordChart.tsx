@@ -6,6 +6,7 @@ import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
 import { useMemo, useState, useRef } from 'react';
 import { Group } from '@visx/group';
+import { localPoint } from '@visx/event';
 
 // Types
 export type ChordChartProps = {
@@ -30,10 +31,14 @@ function ChordChartContent({
   className,
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'],
 }: ChordChartContentProps) {
-  const outerRadius = Math.min(width, height) * 0.5 - 40;
-  const innerRadius = outerRadius - 20;
+  // Calculate radius adaptively based on available space
+  const centerSize = Math.min(width, height);
+  const padding = Math.min(40, centerSize * 0.2); // Dynamic padding that scales with size
+  const outerRadius = Math.max(10, centerSize * 0.5 - padding);
+  const innerRadius = Math.max(5, outerRadius - 20);
 
-  const [activeArc, setActiveArc] = useState<number | null>(null);
+  const [activeGroup, setActiveGroup] = useState<number | null>(null);
+  const [activeRibbon, setActiveRibbon] = useState<number | null>(null);
 
   const colorScale = useMemo(
     () =>
@@ -84,9 +89,16 @@ function ChordChartContent({
                     outerRadius={outerRadius}
                     fill={colorScale(keys[i])}
                     className="transition-opacity duration-200 cursor-pointer"
-                    opacity={activeArc === null || activeArc === i ? 1 : 0.3}
-                    onMouseEnter={() => setActiveArc(i)}
-                    onMouseLeave={() => setActiveArc(null)}
+                    opacity={
+                      (activeGroup !== null && activeGroup !== i) ||
+                        (activeRibbon !== null &&
+                          chords[activeRibbon].source.index !== i &&
+                          chords[activeRibbon].target.index !== i)
+                        ? 0.3
+                        : 1
+                    }
+                    onMouseEnter={() => setActiveGroup(i)}
+                    onMouseLeave={() => setActiveGroup(null)}
                   />
                 ))}
 
@@ -97,26 +109,34 @@ function ChordChartContent({
                     radius={innerRadius}
                     fill={colorScale(keys[chord.source.index])}
                     fillOpacity={0.75}
-                    className="transition-all duration-200 hover:fill-opacity-100 mix-blend-multiply dark:mix-blend-screen"
+                    className="transition-all duration-200 hover:fill-opacity-100"
                     opacity={
-                      activeArc === null ||
-                        activeArc === chord.source.index ||
-                        activeArc === chord.target.index ? 0.75 : 0.1
+                      (activeGroup !== null &&
+                        activeGroup !== chord.source.index &&
+                        activeGroup !== chord.target.index) ||
+                        (activeRibbon !== null && activeRibbon !== i)
+                        ? 0.1
+                        : 0.75
                     }
-                    onMouseEnter={(event) => {
-                      const rect = svgRef.current?.getBoundingClientRect();
-                      if (!rect) return;
+                    onMouseEnter={() => setActiveRibbon(i)}
+                    onMouseLeave={() => {
+                      setActiveRibbon(null);
+                      hideTooltip();
+                    }}
+                    onMouseMove={(event) => {
+                      const coords = localPoint(event);
+                      if (!coords) return;
 
+                      setActiveRibbon(i);
                       showTooltip({
                         tooltipData: {
                           label: `${keys[chord.source.index]} ↔ ${keys[chord.target.index]}`,
                           value: chord.source.value
                         },
-                        tooltipLeft: event.clientX - rect.left,
-                        tooltipTop: event.clientY - rect.top,
+                        tooltipLeft: coords.x,
+                        tooltipTop: coords.y,
                       });
                     }}
-                    onMouseLeave={() => hideTooltip()}
                   />
                 ))}
               </g>
@@ -130,9 +150,9 @@ function ChordChartContent({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl pointer-events-none">
             <span className="font-semibold block">{tooltipData.label}</span>
             <span className="text-xs text-muted-foreground">Flow: {tooltipData.value}</span>
           </div>
@@ -144,7 +164,7 @@ function ChordChartContent({
 
 export const ChordChart = (props: ChordChartProps) => {
   return (
-    <div className="w-full h-[400px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <ChordChartContent {...props} width={width} height={height} />}
       </ParentSize>

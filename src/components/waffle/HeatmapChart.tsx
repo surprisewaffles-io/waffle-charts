@@ -133,10 +133,10 @@ function HeatmapChartContent({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
-            <p className="font-semibold">Value: {tooltipData}</p>
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
+            <p className="font-semibold text-slate-900 dark:text-slate-100">Value: {tooltipData}</p>
           </div>
         </TooltipInPortal>
       )}
@@ -146,7 +146,7 @@ function HeatmapChartContent({
 
 export const HeatmapChart = (props: HeatmapChartProps) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <HeatmapChartContent {...props} width={width} height={height} />}
       </ParentSize>

@@ -25,13 +25,15 @@ export function LineChartPage() {
         description="Line chart with gradient area fill and snapping tooltips."
         code={LineChartSource}
       >
-        <LineChart
-          data={data}
-          xKey="date"
-          yKey="value"
-          lineColor="stroke-blue-500"
-          areaColor="text-blue-500"
-        />
+        <div className="h-[400px] w-full">
+          <LineChart
+            data={data}
+            xKey="date"
+            yKey="value"
+            lineColor="#3b82f6"
+            areaColor="#3b82f6"
+          />
+        </div>
       </ComponentPreview>
     </div>
   );

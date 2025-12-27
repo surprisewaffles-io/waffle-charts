@@ -14,7 +14,9 @@ export type ScatterChartProps<T> = {
   xKey: keyof T;
   yKey: keyof T;
   className?: string; // Wrapper class
-  pointClassName?: string; // Point color/style
+  pointClassName?: string; // Point color/style (Tailwind class)
+  pointColor?: string; // Direct color value (hex, rgb, etc.) - takes precedence over pointClassName
+  pointRadius?: number; // Point size
   width?: number;
   height?: number;
 };
@@ -32,12 +34,20 @@ function ScatterChartContent<T>({
   xKey,
   yKey,
   className,
-  pointClassName = "fill-primary",
+  pointClassName,
+  pointColor,
+  pointRadius = 6,
 }: ScatterChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
+
+  // Determine active color mode
+  // If pointColor is provided, use it.
+  // If pointClassName is provided, use it (activeColor is undefined).
+  // If NEITHER is provided, default to the purple hex palette.
+  const activeColor = pointColor ?? (pointClassName ? undefined : "#a855f7");
 
   // Accessors
   const getX = (d: T) => Number(d[xKey]);
@@ -89,16 +99,16 @@ function ScatterChartContent<T>({
             yScale={yScale}
             width={xMax}
             height={yMax}
-            stroke="hsl(var(--border))"
+            stroke="hsl(var(--border, 214.3 31.8% 91.4%))"
             strokeOpacity={0.4}
           />
           <AxisBottom
             top={yMax}
             scale={xScale}
-            stroke="hsl(var(--border))"
-            tickStroke="hsl(var(--border))"
+            stroke="hsl(var(--border, 214.3 31.8% 91.4%))"
+            tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
             tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
+              fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
               fontSize: 11,
               textAnchor: "middle",
             }}
@@ -106,9 +116,9 @@ function ScatterChartContent<T>({
           <AxisLeft
             scale={yScale}
             stroke="transparent"
-            tickStroke="hsl(var(--border))"
+            tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
             tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
+              fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
               fontSize: 11,
               textAnchor: "end",
               dx: -4,
@@ -123,8 +133,9 @@ function ScatterChartContent<T>({
                 key={`point-${i}`}
                 cx={cx}
                 cy={cy}
-                r={6}
-                className={cn("transition-all duration-300 hover:r-8 hover:opacity-80 cursor-pointer", pointClassName)}
+                r={pointRadius}
+                fill={activeColor}
+                className={cn("transition-all duration-300 hover:r-8 hover:opacity-80 cursor-pointer", !activeColor && pointClassName)}
                 onMouseEnter={() => {
                   showTooltip({
                     tooltipData: d,
@@ -142,9 +153,9 @@ function ScatterChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <div className="flex flex-col gap-1">
               <span className="font-semibold">{String(getY(tooltipData))}</span>
               <span className="text-xs text-muted-foreground">{String(getX(tooltipData))}</span>
@@ -158,7 +169,7 @@ function ScatterChartContent<T>({
 
 export const ScatterChart = <T,>(props: ScatterChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <ScatterChartContent {...props} width={width} height={height} />}
       </ParentSize>

@@ -8,6 +8,8 @@ import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
 
+import { GridRows, GridColumns } from '@visx/grid';
+
 // Types
 export type BarChartProps<T> = {
   data: T[];
@@ -17,6 +19,15 @@ export type BarChartProps<T> = {
   barColor?: string;
   width?: number;
   height?: number;
+
+  // Configuration
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showGridRows?: boolean;
+  showGridColumns?: boolean;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  margin?: { top: number; right: number; bottom: number; left: number };
 };
 
 // Internal component with required dimensions
@@ -32,10 +43,18 @@ function BarChartContent<T>({
   xKey,
   yKey,
   className,
-  barColor = "bg-primary"
+  barColor = "#a855f7",
+  showXAxis = true,
+  showYAxis = true,
+  showGridRows = true,
+  showGridColumns = false,
+  xAxisLabel,
+  yAxisLabel,
+  margin: customMargin
 }: BarChartContentProps<T>) {
   // Config
-  const margin = { top: 40, right: 30, bottom: 50, left: 50 };
+  const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
+  const margin = { ...defaultMargin, ...customMargin };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
@@ -85,36 +104,63 @@ function BarChartContent<T>({
     <div className={cn("relative", className)}>
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
         <Group left={margin.left} top={margin.top}>
-          <AxisBottom
-            top={yMax}
-            scale={xScale}
-            stroke="hsl(var(--border))"
-            tickStroke="hsl(var(--border))"
-            tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 11,
-              textAnchor: "middle",
-            }}
-          />
-          <AxisLeft
-            scale={yScale}
-            stroke="transparent"
-            tickStroke="hsl(var(--border))"
-            tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 11,
-              textAnchor: "end",
-              dx: -4,
-              dy: 4,
-            }}
-            numTicks={5}
-          />
+          {(showGridRows || showGridColumns) && (
+            <Group>
+              {showGridRows && <GridRows scale={yScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border))" strokeOpacity={0.5} pointerEvents="none" />}
+              {showGridColumns && <GridColumns scale={xScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border, 214.3 31.8% 91.4%))" strokeOpacity={0.5} pointerEvents="none" />}
+            </Group>
+          )}
+
+          {showXAxis && (
+            <AxisBottom
+              top={yMax}
+              scale={xScale}
+              stroke="hsl(var(--border, 214.3 31.8% 91.4%))"
+              tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
+              label={xAxisLabel}
+              labelProps={{
+                fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
+                fontSize: 12,
+                textAnchor: 'middle',
+                dy: 0
+              }}
+              tickLabelProps={{
+                fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
+                fontSize: 11,
+                textAnchor: "middle",
+              }}
+            />
+          )}
+
+          {showYAxis && (
+            <AxisLeft
+              scale={yScale}
+              stroke="transparent"
+              tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
+              label={yAxisLabel}
+              labelProps={{
+                fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
+                fontSize: 12,
+                textAnchor: 'middle',
+                dx: -10
+              }}
+              tickLabelProps={{
+                fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
+                fontSize: 11,
+                textAnchor: "end",
+                dx: -4,
+                dy: 4,
+              }}
+              numTicks={5}
+            />
+          )}
           {data.map((d) => {
             const letter = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = yMax - (yScale(getY(d)) ?? 0);
             const barX = xScale(letter);
             const barY = yMax - barHeight;
+            const isHex = barColor.startsWith('#') || barColor.startsWith('rgb');
             return (
               <Bar
                 key={`bar-${letter}`}
@@ -122,7 +168,8 @@ function BarChartContent<T>({
                 y={barY}
                 width={barWidth}
                 height={barHeight}
-                className={cn("fill-primary transition-all duration-300 hover:opacity-80 cursor-pointer", barColor)}
+                fill={isHex ? barColor : undefined}
+                className={cn("transition-all duration-300 hover:opacity-80 cursor-pointer", !isHex && barColor)}
                 onMouseLeave={() => hideTooltip()}
                 onMouseMove={(event) => {
                   const eventSvgCoords = localPoint(event);
@@ -142,9 +189,9 @@ function BarChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <p className="font-semibold">{String(getY(tooltipData))}</p>
             <p className="text-xs text-muted-foreground">{getX(tooltipData)}</p>
           </div>

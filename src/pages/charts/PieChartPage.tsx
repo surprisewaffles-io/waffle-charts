@@ -23,7 +23,7 @@ export function PieChartPage() {
         code={PieChartSource}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center w-full h-[300px]">
             <h4 className="mb-4 text-sm font-medium">Basic Pie</h4>
             <PieChart
               data={data}
@@ -31,7 +31,7 @@ export function PieChartPage() {
               labelKey="label"
             />
           </div>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center w-full h-[300px]">
             <h4 className="mb-4 text-sm font-medium">Donut</h4>
             <PieChart
               data={data}

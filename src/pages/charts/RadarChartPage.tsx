@@ -24,11 +24,13 @@ export function RadarChartPage() {
         title="Student Marks"
         code={RadarChartSource}
       >
-        <RadarChart
-          data={data}
-          radiusKey="A"
-          angleKey="subject"
-        />
+        <div className="h-[400px] w-full">
+          <RadarChart
+            data={data}
+            radiusKey="A"
+            angleKey="subject"
+          />
+        </div>
       </ComponentPreview>
     </div>
   );

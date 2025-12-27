@@ -82,7 +82,7 @@ const charts = [
   { name: "Radar Chart", path: "/docs/radar-chart", tags: ["Comparison", "Multivariate"], component: <RadarChart data={radarData} width={300} height={200} angleKey="angle" radiusKey="r" /> },
   { name: "Scatter Plot", path: "/docs/scatter-chart", tags: ["Correlation", "Distribution"], component: <ScatterChart data={scatterData} width={300} height={200} xKey="x" yKey="y" /> },
   { name: "Bubble Chart", path: "/docs/bubble-chart", tags: ["Correlation", "Multivariate"], component: <BubbleChart data={bubbleData} xKey="x" yKey="y" zKey="z" /> },
-  { name: "Heatmap", path: "/docs/heatmap", tags: ["Distribution", "Density"], component: <HeatmapChart data={heatmapData} colorRange={['#f1f5f9', '#0f172a']} /> },
+  { name: "Heatmap", path: "/docs/heatmap", tags: ["Distribution", "Density"], component: <HeatmapChart data={heatmapData} colorRange={['#fbe7f3', '#a855f7']} /> },
   { name: "Treemap", path: "/docs/treemap", tags: ["Hierarchy", "Proportion"], component: <TreemapChart data={treemapData} /> },
   {
     name: "Sankey", path: "/docs/sankey-chart", tags: ["Flow", "Process"], component: <SankeyChart data={
@@ -164,8 +164,8 @@ export function GalleryPage() {
           <button
             onClick={() => setSelectedTag(null)}
             className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selectedTag === null
-                ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
-                : "text-foreground hover:bg-muted"
+              ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+              : "text-foreground hover:bg-muted"
               }`}
           >
             All
@@ -175,8 +175,8 @@ export function GalleryPage() {
               key={tag}
               onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
               className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selectedTag === tag
-                  ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
-                  : "text-foreground hover:bg-muted"
+                ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                : "text-foreground hover:bg-muted"
                 }`}
             >
               {tag}

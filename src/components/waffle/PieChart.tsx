@@ -21,6 +21,7 @@ export type PieChartProps<T> = {
     title: string;
     subtitle?: string;
   };
+  margin?: { top: number; right: number; bottom: number; left: number };
 };
 
 type PieChartContentProps<T> = PieChartProps<T> & {
@@ -38,8 +39,10 @@ function PieChartContent<T>({
   innerRadius = 0, // Default to full pie
   colors,
   centerText,
+  margin: customMargin
 }: PieChartContentProps<T>) {
-  const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const defaultMargin = { top: 20, right: 20, bottom: 20, left: 20 };
+  const margin = { ...defaultMargin, ...customMargin };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
   const radius = Math.min(innerWidth, innerHeight) / 2;
@@ -76,7 +79,7 @@ function PieChartContent<T>({
   // Interaction State
   const [activeShape, setActiveShape] = useState<number | null>(null);
 
-  if (width < 10) return null;
+  if (width < 10 || height < 100) return null;
 
   return (
     <div className={cn("relative flex items-center justify-center", className)}>
@@ -112,9 +115,10 @@ function PieChartContent<T>({
                   <g key={`arc-${index}`}>
                     <path
                       d={arcPath || ''}
-                      className={cn("fill-current transition-all duration-300 cursor-pointer hover:opacity-80", colorScale(index))}
+                      fill={String(colorScale(index)).startsWith('#') ? String(colorScale(index)) : undefined}
+                      className={cn("fill-current transition-all duration-300 cursor-pointer hover:opacity-80", !String(colorScale(index)).startsWith('#') && colorScale(index))}
                       // If colors are passed as specific colors (not classes), you might use fill={...} instead. 
-                      // This implementation assumes 'colors' prop contains Tailwind TEXT color classes (e.g. 'text-blue-500'),
+                      // This implementation supports both hex colors and Tailwind TEXT color classes (e.g. 'text-blue-500'),
                       // which fill-current will inherit.
                       onMouseEnter={() => {
                         setActiveShape(index);
@@ -154,9 +158,9 @@ function PieChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <p className="font-semibold">{String(getValue(tooltipData))}</p>
             <p className="text-xs text-muted-foreground">{String(tooltipData[labelKey])}</p>
           </div>

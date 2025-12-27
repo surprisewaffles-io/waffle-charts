@@ -15,7 +15,9 @@ export type BubbleChartProps<T> = {
   yKey: keyof T;
   zKey: keyof T; // Radius
   className?: string; // Wrapper class
-  pointClassName?: string; // Point color/style
+  pointClassName?: string; // Point color/style (Tailwind class)
+  bubbleColor?: string; // Direct color value (hex, rgb) - takes precedence
+  colorScheme?: string[]; // Array of colors for multi-bubble coloring
   width?: number;
   height?: number;
   minRadius?: number;
@@ -37,6 +39,8 @@ function BubbleChartContent<T>({
   zKey,
   className,
   pointClassName = "fill-primary/50", // Use opacity for bubbles
+  bubbleColor = "#a855f7", // Default bubble color
+  colorScheme,
   minRadius = 4,
   maxRadius = 30,
 }: BubbleChartContentProps<T>) {
@@ -106,15 +110,15 @@ function BubbleChartContent<T>({
             yScale={yScale}
             width={xMax}
             height={yMax}
-            stroke="hsl(var(--border))"
+            stroke="hsl(var(--border, 214.3 31.8% 91.4%))"
             strokeOpacity={0.4}
           />
           <AxisLeft
             scale={yScale}
             stroke="transparent"
-            tickStroke="hsl(var(--border))"
+            tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
             tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
+              fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
               fontSize: 11,
               textAnchor: "end",
               dx: -4,
@@ -136,6 +140,8 @@ function BubbleChartContent<T>({
             const cx = xScale(getX(d));
             const cy = yScale(getY(d));
             const r = zScale(getZ(d));
+            // Determine fill color: colorScheme (per bubble) > bubbleColor (single) > pointClassName
+            const fillColor = colorScheme ? colorScheme[i % colorScheme.length] : bubbleColor;
 
             return (
               <Circle
@@ -143,7 +149,8 @@ function BubbleChartContent<T>({
                 cx={cx}
                 cy={cy}
                 r={r}
-                className={cn("transition-all duration-300 hover:opacity-80 cursor-pointer stroke-background stroke-1", pointClassName)}
+                fill={fillColor}
+                className={cn("transition-all duration-300 hover:opacity-80 cursor-pointer stroke-background stroke-1", !fillColor && pointClassName)}
                 onMouseEnter={() => {
                   showTooltip({
                     tooltipData: d,
@@ -161,9 +168,9 @@ function BubbleChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <div className="flex flex-col gap-1">
               <span className="font-semibold text-xs text-muted-foreground">Values</span>
               <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mt-1">
@@ -184,7 +191,7 @@ function BubbleChartContent<T>({
 
 export const BubbleChart = <T,>(props: BubbleChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <BubbleChartContent {...props} width={width} height={height} />}
       </ParentSize>

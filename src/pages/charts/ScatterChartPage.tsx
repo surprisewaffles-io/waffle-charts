@@ -23,12 +23,14 @@ export function ScatterChartPage() {
         description="A scatter plot with grid lines and hover effects."
         code={ScatterChartSource}
       >
-        <ScatterChart
-          data={data}
-          xKey="x"
-          yKey="y"
-          pointClassName="fill-purple-500"
-        />
+        <div className="h-[400px] w-full">
+          <ScatterChart
+            data={data}
+            xKey="x"
+            yKey="y"
+            pointClassName="fill-purple-500"
+          />
+        </div>
       </ComponentPreview>
 
       <div className="p-6 border rounded-lg shadow-sm">

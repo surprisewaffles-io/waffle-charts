@@ -25,12 +25,14 @@ export function AreaChartPage() {
         title="Traffic Sources"
         code={AreaChartSource}
       >
-        <AreaChart
-          data={data}
-          xKey="date"
-          keys={['organic', 'paid']}
-          colors={['text-green-500', 'text-blue-500']}
-        />
+        <div className="h-[400px] w-full">
+          <AreaChart
+            data={data}
+            xKey="date"
+            keys={['organic', 'paid']}
+            colors={['#22c55e', '#3b82f6']}
+          />
+        </div>
       </ComponentPreview>
     </div>
   );

@@ -25,28 +25,34 @@ export function BarChartPage() {
         description="A simple bar chart with tooltips and hover effects."
         code={BarChartSource}
       >
-        <BarChart
-          data={data}
-          xKey="letter"
-          yKey="frequency"
-        />
+        <div className="h-[400px] w-full">
+          <BarChart
+            data={data}
+            xKey="letter"
+            yKey="frequency"
+          />
+        </div>
       </ComponentPreview>
 
       <div className="p-6 border rounded-lg shadow-sm">
         <h3 className="font-semibold mb-4">Custom Colors</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <BarChart
-            data={data.slice(0, 4)}
-            xKey="letter"
-            yKey="frequency"
-            barColor="fill-indigo-500"
-          />
-          <BarChart
-            data={data.slice(0, 4)}
-            xKey="letter"
-            yKey="frequency"
-            barColor="fill-orange-500"
-          />
+          <div className="h-[200px] w-full">
+            <BarChart
+              data={data.slice(0, 4)}
+              xKey="letter"
+              yKey="frequency"
+              barColor="#6366f1"
+            />
+          </div>
+          <div className="h-[200px] w-full">
+            <BarChart
+              data={data.slice(0, 4)}
+              xKey="letter"
+              yKey="frequency"
+              barColor="#f97316"
+            />
+          </div>
         </div>
       </div>
     </div>

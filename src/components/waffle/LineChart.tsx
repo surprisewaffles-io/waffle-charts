@@ -22,6 +22,15 @@ export type LineChartProps<T> = {
   areaColor?: string; // CSS class for area fill
   width?: number;
   height?: number;
+
+  // Configuration
+  showXAxis?: boolean;
+  showYAxis?: boolean;
+  showGridRows?: boolean;
+  showGridColumns?: boolean;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  margin?: { top: number; right: number; bottom: number; left: number };
 };
 
 type LineChartContentProps<T> = LineChartProps<T> & {
@@ -36,11 +45,19 @@ function LineChartContent<T>({
   xKey,
   yKey,
   className,
-  lineColor = "stroke-primary",
-  areaColor = "text-primary", // using text color to set fill via currentColor/opacity
+  lineColor = "#a855f7",
+  areaColor = "#ec4899",
+  showXAxis = true,
+  showYAxis = true,
+  showGridRows = true,
+  showGridColumns = false,
+  xAxisLabel,
+  yAxisLabel,
+  margin: customMargin
 }: LineChartContentProps<T>) {
   // Config
-  const margin = { top: 40, right: 30, bottom: 50, left: 50 };
+  const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
+  const margin = { ...defaultMargin, ...customMargin };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
@@ -105,7 +122,7 @@ function LineChartContent<T>({
     }
   };
 
-  if (width < 10) return null;
+  if (width < 10 || height < 100) return null;
 
   return (
     <div className={cn("relative", className)}>
@@ -113,40 +130,63 @@ function LineChartContent<T>({
         {/* Defs for gradient */}
         <defs>
           <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="currentColor" stopOpacity={0.2} className={areaColor} />
-            <stop offset="100%" stopColor="currentColor" stopOpacity={0} className={areaColor} />
+            <stop offset="0%" stopColor={lineColor.startsWith('#') ? lineColor : 'currentColor'} stopOpacity={0.2} className={!lineColor.startsWith('#') ? areaColor : undefined} />
+            <stop offset="100%" stopColor={lineColor.startsWith('#') ? lineColor : 'currentColor'} stopOpacity={0} className={!lineColor.startsWith('#') ? areaColor : undefined} />
           </linearGradient>
         </defs>
 
         <Group left={margin.left} top={margin.top}>
-          <GridRows scale={yScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border))" tickValues={[...yScale.ticks(5)]} />
-          <GridColumns scale={xScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border))" />
+          {(showGridRows || showGridColumns) && (
+            <Group>
+              {showGridRows && <GridRows scale={yScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border, 214.3 31.8% 91.4%))" tickValues={[...yScale.ticks(5)]} />}
+              {showGridColumns && <GridColumns scale={xScale} width={xMax} height={yMax} strokeDasharray="3,3" stroke="hsl(var(--border, 214.3 31.8% 91.4%))" />}
+            </Group>
+          )}
 
-          <AxisBottom
-            top={yMax}
-            scale={xScale}
-            stroke="hsl(var(--border))"
-            tickStroke="hsl(var(--border))"
-            tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 11,
-              textAnchor: "middle",
-            }}
-            numTicks={width > 520 ? 10 : 5}
-          />
-          <AxisLeft
-            scale={yScale}
-            stroke="transparent"
-            tickStroke="hsl(var(--border))"
-            tickLabelProps={{
-              fill: "hsl(var(--muted-foreground))",
-              fontSize: 11,
-              textAnchor: "end",
-              dx: -4,
-              dy: 4,
-            }}
-            numTicks={5}
-          />
+          {showXAxis && (
+            <AxisBottom
+              top={yMax}
+              scale={xScale}
+              stroke="hsl(var(--border))"
+              tickStroke="hsl(var(--border))"
+              label={xAxisLabel}
+              labelProps={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 12,
+                textAnchor: 'middle',
+                dy: 0
+              }}
+              tickLabelProps={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+                textAnchor: "middle",
+              }}
+              numTicks={width > 520 ? 10 : 5}
+            />
+          )}
+
+          {showYAxis && (
+            <AxisLeft
+              scale={yScale}
+              stroke="transparent"
+              tickStroke="hsl(var(--border))"
+              label={yAxisLabel}
+              labelProps={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 12,
+                textAnchor: 'middle',
+                dx: -10
+              }}
+              tickLabelProps={{
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 11,
+                textAnchor: "end",
+                dx: -4,
+                dy: 4,
+              }}
+              numTicks={5}
+            />
+          )}
 
           <AreaClosed
             data={data}
@@ -164,7 +204,8 @@ function LineChartContent<T>({
             y={d => yScale(getY(d)) ?? 0}
             curve={curveMonotoneX}
             strokeWidth={2}
-            className={cn("fill-transparent transition-all", lineColor)}
+            stroke={lineColor.startsWith('#') ? lineColor : undefined}
+            className={cn("fill-transparent transition-all", !lineColor.startsWith('#') && lineColor)}
           />
 
           {/* Tooltip Overlay */}
@@ -207,9 +248,9 @@ function LineChartContent<T>({
         <TooltipInPortal
           top={tooltipTop}
           left={tooltipLeft}
-          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent' }}
+          style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
-          <div className="rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95">
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
             <p className="font-semibold">{String(getY(tooltipData))}</p>
             <p className="text-xs text-muted-foreground">{getX(tooltipData).toLocaleDateString()}</p>
           </div>
@@ -221,7 +262,7 @@ function LineChartContent<T>({
 
 export const LineChart = <T,>(props: LineChartProps<T>) => {
   return (
-    <div className="w-full h-[300px]">
+    <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
         {({ width, height }) => <LineChartContent {...props} width={width} height={height} />}
       </ParentSize>
