@@ -56,6 +56,12 @@ function AreaChartContent<T>({
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
+  // Defensive Check: Ensure data is an array before processing
+  if (!Array.isArray(data)) {
+    console.warn("AreaChart: data prop is not an array", data);
+    return null;
+  }
+
   // Accessors
   const getX = (d: T) => new Date(d[xKey] as string | number | Date);
   const getY0 = (d: unknown) => (d as { [key: string]: number })[0];
