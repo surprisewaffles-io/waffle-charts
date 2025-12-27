@@ -75,17 +75,17 @@ const bubbleData = Array.from({ length: 15 }, () => ({
 }));
 
 const charts = [
-  { name: "Bar Chart", path: "/docs/bar-chart", component: <BarChart data={barData} width={300} height={200} xKey="letter" yKey="frequency" /> },
-  { name: "Line Chart", path: "/docs/line-chart", component: <LineChart data={dateData} width={300} height={200} xKey="date" yKey="value" /> },
-  { name: "Area Chart", path: "/docs/area-chart", component: <AreaChart data={dateData} width={300} height={200} xKey="date" keys={['value']} /> },
-  { name: "Pie Chart", path: "/docs/pie-chart", component: <PieChart data={pieData} width={300} height={200} labelKey="label" valueKey="value" /> },
-  { name: "Radar Chart", path: "/docs/radar-chart", component: <RadarChart data={radarData} width={300} height={200} angleKey="angle" radiusKey="r" /> },
-  { name: "Scatter Plot", path: "/docs/scatter-chart", component: <ScatterChart data={scatterData} width={300} height={200} xKey="x" yKey="y" /> },
-  { name: "Bubble Chart", path: "/docs/bubble-chart", component: <BubbleChart data={bubbleData} xKey="x" yKey="y" zKey="z" /> },
-  { name: "Heatmap", path: "/docs/heatmap", component: <HeatmapChart data={heatmapData} colorRange={['#f1f5f9', '#0f172a']} /> },
-  { name: "Treemap", path: "/docs/treemap", component: <TreemapChart data={treemapData} /> },
+  { name: "Bar Chart", path: "/docs/bar-chart", tags: ["Comparison", "Distribution"], component: <BarChart data={barData} width={300} height={200} xKey="letter" yKey="frequency" /> },
+  { name: "Line Chart", path: "/docs/line-chart", tags: ["Trend", "Time-Series"], component: <LineChart data={dateData} width={300} height={200} xKey="date" yKey="value" /> },
+  { name: "Area Chart", path: "/docs/area-chart", tags: ["Trend", "Volume"], component: <AreaChart data={dateData} width={300} height={200} xKey="date" keys={['value']} /> },
+  { name: "Pie Chart", path: "/docs/pie-chart", tags: ["Proportion"], component: <PieChart data={pieData} width={300} height={200} labelKey="label" valueKey="value" /> },
+  { name: "Radar Chart", path: "/docs/radar-chart", tags: ["Comparison", "Multivariate"], component: <RadarChart data={radarData} width={300} height={200} angleKey="angle" radiusKey="r" /> },
+  { name: "Scatter Plot", path: "/docs/scatter-chart", tags: ["Correlation", "Distribution"], component: <ScatterChart data={scatterData} width={300} height={200} xKey="x" yKey="y" /> },
+  { name: "Bubble Chart", path: "/docs/bubble-chart", tags: ["Correlation", "Multivariate"], component: <BubbleChart data={bubbleData} xKey="x" yKey="y" zKey="z" /> },
+  { name: "Heatmap", path: "/docs/heatmap", tags: ["Distribution", "Density"], component: <HeatmapChart data={heatmapData} colorRange={['#f1f5f9', '#0f172a']} /> },
+  { name: "Treemap", path: "/docs/treemap", tags: ["Hierarchy", "Proportion"], component: <TreemapChart data={treemapData} /> },
   {
-    name: "Sankey", path: "/docs/sankey-chart", component: <SankeyChart data={
+    name: "Sankey", path: "/docs/sankey-chart", tags: ["Flow", "Process"], component: <SankeyChart data={
       // Simple sankey for gallery
       {
         nodes: [{ name: 'A' }, { name: 'B' }, { name: 'C' }, { name: 'D' }],
@@ -98,7 +98,7 @@ const charts = [
     } />
   },
   {
-    name: "Composite", path: "/docs/composite-chart", component: <CompositeChart
+    name: "Composite", path: "/docs/composite-chart", tags: ["Comparison", "Trend", "Dual-Axis"], component: <CompositeChart
       data={[
         { m: 'A', v: 400, l: 15 }, { m: 'B', v: 300, l: 30 }, { m: 'C', v: 500, l: 25 },
         { m: 'D', v: 200, l: 10 }, { m: 'E', v: 450, l: 40 }
@@ -107,7 +107,7 @@ const charts = [
     />
   },
   {
-    name: "Chord", path: "/docs/chord-chart", component: <ChordChart
+    name: "Chord", path: "/docs/chord-chart", tags: ["Flow", "Relationship"], component: <ChordChart
       data={[
         [1197, 587, 891],
         [195, 1004, 206],
@@ -118,9 +118,27 @@ const charts = [
   },
 ];
 
+import { useState, useMemo } from 'react';
+import { Search } from 'lucide-react';
+
 export function GalleryPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    charts.forEach(c => c.tags?.forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }, []);
+
+  const filteredCharts = charts.filter(chart => {
+    const matchesSearch = chart.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTag = selectedTag ? chart.tags?.includes(selectedTag) : true;
+    return matchesSearch && matchesTag;
+  });
+
   return (
-    <div className="space-y-10 pb-10">
+    <div className="space-y-8 pb-10">
       <div className="space-y-4">
         <h1 className="text-4xl font-bold tracking-tight">Gallery</h1>
         <p className="text-xl text-muted-foreground">
@@ -128,24 +146,77 @@ export function GalleryPage() {
         </p>
       </div>
 
+      <div className="flex flex-col gap-4">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search charts..."
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 pl-9 md:w-[300px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selectedTag === null
+                ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                : "text-foreground hover:bg-muted"
+              }`}
+          >
+            All
+          </button>
+          {allTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setSelectedTag(tag === selectedTag ? null : tag)}
+              className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${selectedTag === tag
+                  ? "border-transparent bg-primary text-primary-foreground hover:bg-primary/80"
+                  : "text-foreground hover:bg-muted"
+                }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {charts.map((chart) => (
+        {filteredCharts.map((chart) => (
           <Link
             key={chart.name}
             to={chart.path}
-            className="group relative rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 overflow-hidden"
+            className="group relative rounded-lg border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md hover:border-primary/50 overflow-hidden flex flex-col"
           >
-            <div className="p-6">
+            <div className="p-6 flex-1">
               <div className="w-full h-[200px] overflow-hidden pointer-events-none">
                 {/* Provide a constrained container for responsive charts */}
                 {chart.component}
               </div>
             </div>
-            <div className="bg-muted/50 p-4 border-t group-hover:bg-muted/80 transition-colors">
-              <h3 className="font-semibold tracking-tight">{chart.name}</h3>
+            <div className="bg-muted/30 p-4 border-t group-hover:bg-muted/60 transition-colors flex justify-between items-center">
+              <div>
+                <h3 className="font-semibold tracking-tight">{chart.name}</h3>
+                <div className="flex gap-1 mt-1">
+                  {chart.tags?.map(t => (
+                    <span key={t} className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded-full bg-background border">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </Link>
         ))}
+        {filteredCharts.length === 0 && (
+          <div className="col-span-full text-center py-20 text-muted-foreground">
+            No charts found matching your search.
+          </div>
+        )}
       </div>
     </div>
   );
