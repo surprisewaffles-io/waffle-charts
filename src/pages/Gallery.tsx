@@ -10,7 +10,8 @@ import { TreemapChart } from '../components/waffle/TreemapChart';
 import { BubbleChart } from '../components/waffle/BubbleChart';
 import { SankeyChart } from '../components/waffle/SankeyChart';
 import { CompositeChart } from '../components/waffle/CompositeChart';
-import { ChordChart } from '../components/waffle/ChordChart';
+import { ChordChartPage } from './pages/charts/ChordChartPage';
+import { StatCard } from '../components/waffle/StatCard';
 
 const barData = [
   { letter: 'A', frequency: 0.08167 },
@@ -116,6 +117,16 @@ const charts = [
       keys={['A', 'B', 'C']}
     />
   },
+  },
+{
+  name: "Stat Card", path: "/docs/stat-card", tags: ["KPI", "UI", "Metric"], component: <StatCard
+    label="Total Revenue"
+    value="$12,345"
+    description="+15% vs last month"
+    icon="dollar"
+    trend={{ value: 15, direction: 'up' }}
+  />
+},
 ];
 
 import { useState, useMemo } from 'react';

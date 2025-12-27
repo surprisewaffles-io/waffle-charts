@@ -13,6 +13,7 @@ import { BubbleChartPage } from './pages/charts/BubbleChartPage';
 import { SankeyChartPage } from './pages/charts/SankeyChartPage';
 import { CompositeChartPage } from './pages/charts/CompositeChartPage';
 import { ChordChartPage } from './pages/charts/ChordChartPage';
+import { StatCardPage } from './pages/charts/StatCardPage';
 import { GalleryPage } from './pages/Gallery';
 import { ThemeProvider } from './components/theme-provider';
 
@@ -36,6 +37,7 @@ function App() {
             <Route path="docs/composite-chart" element={<CompositeChartPage />} />
             <Route path="docs/chord-chart" element={<ChordChartPage />} />
             <Route path="docs/bubble-chart" element={<BubbleChartPage />} />
+            <Route path="docs/stat-card" element={<StatCardPage />} />
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

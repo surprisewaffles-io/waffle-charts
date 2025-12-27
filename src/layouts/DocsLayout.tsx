@@ -17,6 +17,7 @@ const sidebarItems = [
   { title: "Composite Chart", path: "/docs/composite-chart" },
   { title: "Chord Diagram", path: "/docs/chord-chart" },
   { title: "Bubble Chart", path: "/docs/bubble-chart" },
+  { title: "Stat Card", path: "/docs/stat-card" },
 ];
 
 export function DocsLayout() {
