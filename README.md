@@ -9,6 +9,7 @@ WaffleCharts is not a library you install. It's a collection of primitives you c
 ## New in v0.1.0
 - **Vibrant Defaults**: Charts now look great out-of-the-box with a standardized purple/pink palette.
 - **Hex Color Support**: Pass explicit hex codes (e.g., `#a855f7`) or Tailwind classes typesafe props.
+- **New Components**: introducing `StatCard` for beautiful single-value displays.
 - **Enhanced Tooltips**: improved readability with solid backgrounds and z-index handling.
 - **Layout Fixes**: Fluid charts now work reliably in all container sizes.
 
