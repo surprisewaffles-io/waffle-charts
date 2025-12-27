@@ -22,5 +22,8 @@ npm install @visx/shape @visx/group @visx/scale @visx/responsive @visx/tooltip @
 ```
 Then copy the component code from the [documentation](https://mbuchthal.github.io/waffle-charts).
 
+## Contributing
+Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.
+
 ## License
 MIT © [WaffleCharts](https://github.com/mbuchthal/waffle-charts)
