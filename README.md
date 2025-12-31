@@ -27,10 +27,10 @@ Install the primitives:
 ```bash
 npm install @visx/shape @visx/group @visx/scale @visx/responsive @visx/tooltip @visx/axis @visx/grid @visx/curve @visx/event @visx/glyph d3-array clsx tailwind-merge lucide-react
 ```
-Then copy the component code from the [documentation](https://mbuchthal.github.io/waffle-charts).
+Then copy the component code from the [documentation](https://surprisewaffles-io.github.io/waffle-charts).
 
 ## Contributing
 Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.
 
 ## License
-MIT © [WaffleCharts](https://github.com/mbuchthal/waffle-charts)
+MIT © [WaffleCharts](https://github.com/surprisewaffles-io/waffle-charts)

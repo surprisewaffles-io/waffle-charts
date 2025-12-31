@@ -1,12 +1,12 @@
 # WaffleCharts CLI 🧇
 
-The official CLI for [WaffleCharts](https://mbuchthal.github.io/waffle-charts).
+The official CLI for [WaffleCharts](https://surprisewaffles-io.github.io/waffle-charts).
 
 > **Beautiful, Headless, Copy-Pasteable Charts for React.**  
 > Built with [Visx](https://airbnb.io/visx) and [Tailwind CSS](https://tailwindcss.com).
 
 [![NPM Version](https://img.shields.io/npm/v/waffle-charts-cli)](https://www.npmjs.com/package/waffle-charts-cli)
-[![License](https://img.shields.io/npm/l/waffle-charts-cli)](https://github.com/mbuchthal/waffle-charts/blob/main/LICENSE)
+[![License](https://img.shields.io/npm/l/waffle-charts-cli)](https://github.com/surprisewaffles-io/waffle-charts/blob/main/LICENSE)
 
 ## Why WaffleCharts?
 
@@ -56,4 +56,4 @@ npx waffle-charts-cli add bar-chart line-chart
 
 ## License
 
-MIT © [WaffleCharts](https://github.com/mbuchthal/waffle-charts)
+MIT © [WaffleCharts](https://github.com/surprisewaffles-io/waffle-charts)
