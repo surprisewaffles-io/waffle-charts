@@ -9,19 +9,26 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
-import { GlyphCircle } from '@visx/glyph';
 import { bisector } from 'd3-array';
 
 // Types
 export type LineChartProps<T> = {
   data: T[];
   xKey: keyof T;
-  yKey: keyof T;
+  yKey?: keyof T; // Optional if series is provided
   className?: string;
   lineColor?: string;
-  areaColor?: string; // CSS class for area fill
+  areaColor?: string; // CSS class for area fill (single series)
   width?: number;
   height?: number;
+
+  // Multi-Series Configuration
+  series?: {
+    key: keyof T;
+    color?: string;
+    label?: string;
+    areaColor?: string; // Optional per series
+  }[];
 
   // Configuration
   showXAxis?: boolean;
@@ -55,7 +62,8 @@ function LineChartContent<T>({
   xAxisLabel,
   yAxisLabel,
   margin: customMargin,
-  yDomain
+  yDomain,
+  series
 }: LineChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -63,9 +71,20 @@ function LineChartContent<T>({
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
+
+  // Backward compatibility: Convert legacy single-series props to series array
+  // If 'series' is provided, use it. Otherwise use 'yKey'.
+  const effectiveSeries = series || (yKey ? [{
+    key: yKey,
+    color: lineColor || "#a855f7",
+    label: yAxisLabel || String(yKey),
+    areaColor: areaColor // Only single series supported area before
+  }] : []);
+
   // Accessors
   const getX = (d: T) => new Date(d[xKey] as string | number | Date);
-  const getY = (d: T) => Number(d[yKey]);
+  // Helper to get value for a specific key
+  const getValue = (d: T, key: keyof T) => Number(d[key]);
 
   // Bisector for tooltip
   const bisectDate = bisector<T, Date>(d => getX(d)).left;
@@ -81,13 +100,18 @@ function LineChartContent<T>({
   );
 
   const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
+    () => {
+      // Find global max across all series
+      const allValues = data.flatMap(d => effectiveSeries.map(s => getValue(d, s.key)));
+      const maxY = Math.max(...allValues);
+
+      return scaleLinear<number>({
         range: [yMax, 0],
         round: true,
-        domain: yDomain || [0, Math.max(...data.map(getY)) * 1.1], // Use prop or calculate
-      }),
-    [yMax, data, yKey, yDomain],
+        domain: yDomain || [0, maxY * 1.1],
+      });
+    },
+    [yMax, data, effectiveSeries, yDomain],
   );
 
   // Tooltip
@@ -119,7 +143,9 @@ function LineChartContent<T>({
       showTooltip({
         tooltipData: d,
         tooltipLeft: xScale(getX(d)) + margin.left,
-        tooltipTop: yScale(getY(d)) + margin.top,
+        tooltipTop: yScale(Math.max(...effectiveSeries.map(s => getValue(d, s.key)))) + margin.top, // Heuristic: top of the highest point? Or follow mouse Y?
+        // Better: Find the Y of the closest series, or just render tooltip at the top/mouse position.
+        // For now, let's keep it simple: Tooltip is "Master" tooltip showing all values.
       });
     }
   };
@@ -127,14 +153,31 @@ function LineChartContent<T>({
   if (width < 10 || height < 100) return null;
 
   return (
-    <div className={cn("relative", className)}>
+    <div className={cn("relative flex flex-col items-center", className)}>
+      {/* Legend (if multi-series) */}
+      {effectiveSeries.length > 1 && (
+        <div className="flex flex-wrap gap-4 mb-2">
+          {effectiveSeries.map((s) => (
+            <div key={String(s.key)} className="flex items-center gap-1.5">
+              <div
+                className="w-2.5 h-2.5 rounded-full"
+                style={{ background: s.color?.startsWith('#') ? s.color : undefined }}
+              />
+              <span className="text-xs text-muted-foreground font-medium">{s.label || String(s.key)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
-        {/* Defs for gradient */}
+        {/* Defs for gradients */}
         <defs>
-          <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={lineColor.startsWith('#') ? lineColor : 'currentColor'} stopOpacity={0.2} className={!lineColor.startsWith('#') ? areaColor : undefined} />
-            <stop offset="100%" stopColor={lineColor.startsWith('#') ? lineColor : 'currentColor'} stopOpacity={0} className={!lineColor.startsWith('#') ? areaColor : undefined} />
-          </linearGradient>
+          {effectiveSeries.map((s, i) => (
+            <linearGradient key={`grad-${i}`} id={`area-gradient-${i}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color?.startsWith('#') ? s.color : 'currentColor'} stopOpacity={0.2} />
+              <stop offset="100%" stopColor={s.color?.startsWith('#') ? s.color : 'currentColor'} stopOpacity={0} />
+            </linearGradient>
+          ))}
         </defs>
 
         <Group left={margin.left} top={margin.top}>
@@ -190,25 +233,36 @@ function LineChartContent<T>({
             />
           )}
 
-          <AreaClosed
-            data={data}
-            x={d => xScale(getX(d)) ?? 0}
-            y={d => yScale(getY(d)) ?? 0}
-            yScale={yScale}
-            curve={curveMonotoneX}
-            fill="url(#area-gradient)"
-            className={areaColor} // Pass helper class to set currentColor if needed
-          />
+          {/* Render Series Loops */}
+          {effectiveSeries.map((s, i) => (
+            <Group key={String(s.key)}>
+              {/* Only render Area for the first series if it was requested via legacy prop, 
+                   OR if we decide to support stacked areas later. 
+                   For now, 'areaColor' is legacy. Let's support it for single series. */}
+              {effectiveSeries.length === 1 && s.areaColor && (
+                <AreaClosed
+                  data={data}
+                  x={d => xScale(getX(d)) ?? 0}
+                  y={d => yScale(getValue(d, s.key)) ?? 0}
+                  yScale={yScale}
+                  curve={curveMonotoneX}
+                  fill={`url(#area-gradient-${i})`}
+                  className={s.areaColor}
+                />
+              )}
 
-          <LinePath
-            data={data}
-            x={d => xScale(getX(d)) ?? 0}
-            y={d => yScale(getY(d)) ?? 0}
-            curve={curveMonotoneX}
-            strokeWidth={2}
-            stroke={lineColor.startsWith('#') ? lineColor : undefined}
-            className={cn("fill-transparent transition-all", !lineColor.startsWith('#') && lineColor)}
-          />
+              <LinePath
+                data={data}
+                x={d => xScale(getX(d)) ?? 0}
+                y={d => yScale(getValue(d, s.key)) ?? 0}
+                curve={curveMonotoneX}
+                strokeWidth={2}
+                stroke={s.color?.startsWith('#') ? s.color : undefined}
+                className={cn("fill-transparent transition-all", !s.color?.startsWith('#') && s.color)}
+              />
+            </Group>
+          ))}
+
 
           {/* Tooltip Overlay */}
           <Bar
@@ -224,28 +278,24 @@ function LineChartContent<T>({
             onMouseLeave={() => hideTooltip()}
           />
 
-          {/* Tooltip Dot */}
-          {tooltipOpen && tooltipData && (
-            <g>
-              <GlyphCircle
-                left={xScale(getX(tooltipData)) ?? 0}
-                top={yScale(getY(tooltipData)) ?? 0}
-                size={50}
-                className={cn("fill-background", lineColor)}
-                strokeWidth={2}
-                stroke="currentColor" // Inherits from parent or setting explicitly
-              />
+          {/* Tooltip Dots (One per series) */}
+          {tooltipOpen && tooltipData && effectiveSeries.map((s) => (
+            <g key={`dot-${String(s.key)}`}>
               <circle
                 cx={xScale(getX(tooltipData)) ?? 0}
-                cy={yScale(getY(tooltipData)) ?? 0}
+                cy={yScale(getValue(tooltipData, s.key)) ?? 0}
                 r={4}
-                className={cn("fill-background stroke-2", lineColor)}
+                fill={s.color?.startsWith('#') ? s.color : 'currentColor'}
+                stroke="white"
+                strokeWidth={2}
+                className="shadow-sm"
               />
             </g>
-          )}
+          ))}
 
         </Group>
       </svg>
+
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}
@@ -253,8 +303,14 @@ function LineChartContent<T>({
           style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 100 }}
         >
           <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
-            <p className="font-semibold">{String(getY(tooltipData))}</p>
-            <p className="text-xs text-muted-foreground">{getX(tooltipData).toLocaleDateString()}</p>
+            <div className="text-xs text-muted-foreground mb-1 font-semibold">{getX(tooltipData).toLocaleDateString()}</div>
+            {effectiveSeries.map(s => (
+              <div key={String(s.key)} className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color?.startsWith('#') ? s.color : 'currentColor' }} />
+                <span className="text-xs opacity-70">{s.label || String(s.key)}:</span>
+                <span className="font-semibold">{String(getValue(tooltipData, s.key))}</span>
+              </div>
+            ))}
           </div>
         </TooltipInPortal>
       )}

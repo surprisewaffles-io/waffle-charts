@@ -105,4 +105,26 @@ describe('LineChart', () => {
       throw new Error("Could not find overlay rect for interaction");
     }
   });
+  it('renders multiple lines when series prop is provided', () => {
+    const { container } = render(
+      <LineChart
+        data={mockData}
+        xKey="date"
+        series={[
+          { key: 'value', color: 'red' },
+          { key: 'value2' as any, color: 'blue' }
+        ]}
+      />
+    );
+    // Should render multiple paths (one for each series + potentially others like grid)
+    // Minimally we check that it doesn't crash and renders SVG
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+
+    // We can check for the legend items (w-2.5 h-2.5 from implementation)
+    // Using partial match on class or just counting items in legend container
+    // Let's find the legend container first if possible, or search by class
+    const legendItems = container.querySelectorAll('.rounded-full');
+    expect(legendItems.length).toBe(2);
+  });
 });

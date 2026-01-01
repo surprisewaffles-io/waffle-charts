@@ -58,5 +58,10 @@ export const registry = {
     file: "ChordChart.tsx",
     label: "Chord Diagram",
     dependencies: ["@visx/chord", "@visx/scale", "@visx/tooltip", "@visx/shape", "@visx/responsive", "@visx/group", "clsx", "tailwind-merge"],
+  },
+  "candlestick-chart": {
+    file: "CandlestickChart.tsx",
+    label: "Candlestick Chart",
+    dependencies: ["@visx/group", "@visx/scale", "@visx/shape", "@visx/axis", "@visx/grid", "@visx/responsive", "@visx/tooltip", "@visx/event", "d3-array", "clsx", "tailwind-merge"],
   }
 };

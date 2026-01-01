@@ -96,4 +96,34 @@ describe('BarChart', () => {
     const tooltipValue = await screen.findByText('101');
     expect(tooltipValue).toBeVisible();
   });
+
+  it('renders stacked bar chart', () => {
+    const { container } = render(
+      <BarChart
+        data={mockData}
+        xKey="label"
+        variant="stacked"
+        keys={['value']}
+      />
+    );
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    const bars = container.querySelectorAll('rect');
+    expect(bars.length).toBeGreaterThan(0);
+  });
+
+  it('renders grouped bar chart', () => {
+    const { container } = render(
+      <BarChart
+        data={mockData}
+        xKey="label"
+        variant="grouped"
+        keys={['value']}
+      />
+    );
+    const svg = container.querySelector('svg');
+    expect(svg).toBeInTheDocument();
+    const bars = container.querySelectorAll('rect');
+    expect(bars.length).toBeGreaterThan(0);
+  });
 });

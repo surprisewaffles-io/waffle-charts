@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AreaStack } from '@visx/shape';
+import { Bar, Line } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleTime, scaleLinear } from '@visx/scale';
 import { AxisBottom, AxisLeft } from '@visx/axis';
@@ -8,16 +8,31 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
-import { bisector } from 'd3-array';
+import { min, max } from 'd3-array';
 
-export type AreaChartProps<T> = {
+export type CandlestickData = {
+  date: Date;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+};
+
+export type CandlestickChartProps<T> = {
   data: T[];
   xKey: keyof T;
-  keys: (keyof T)[]; // Keys to stack
-  colors?: string[]; // CSS text-color classes
-  className?: string;
+  openKey: keyof T;
+  highKey: keyof T;
+  lowKey: keyof T;
+  closeKey: keyof T;
+
   width?: number;
   height?: number;
+  className?: string;
+
+  // Colors
+  upColor?: string; // Default green
+  downColor?: string; // Default red
 
   // Configuration
   showXAxis?: boolean;
@@ -29,63 +44,55 @@ export type AreaChartProps<T> = {
   margin?: { top: number; right: number; bottom: number; left: number };
 };
 
-type AreaChartContentProps<T> = AreaChartProps<T> & {
+type CandlestickChartContentProps<T> = CandlestickChartProps<T> & {
   width: number;
   height: number;
 };
 
-function AreaChartContent<T>({
+function CandlestickChartContent<T>({
   data,
   width,
   height,
   xKey,
-  keys,
-  colors = ['#a855f7', '#ec4899'],
+  openKey,
+  highKey,
+  lowKey,
+  closeKey,
   className,
+  upColor = "#22c55e", // green-500
+  downColor = "#ef4444", // red-500
   showXAxis = true,
   showYAxis = true,
   showGridRows = true,
   showGridColumns = false,
   xAxisLabel,
   yAxisLabel,
-  margin: customMargin
-}: AreaChartContentProps<T>) {
+  margin: customMargin,
+}: CandlestickChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
   const margin = { ...defaultMargin, ...customMargin };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Defensive Check: Ensure data is an array before processing
-  if (!Array.isArray(data)) {
-    console.warn("AreaChart: data prop is not an array", data);
-    return null;
-  }
-
   // Accessors
   const getX = (d: T) => new Date(d[xKey] as string | number | Date);
-  const getY0 = (d: unknown) => (d as { [key: string]: number })[0];
-  const getY1 = (d: unknown) => (d as { [key: string]: number })[1];
-
+  const getHigh = (d: T) => Number(d[highKey]);
+  const getLow = (d: T) => Number(d[lowKey]);
+  const getOpen = (d: T) => Number(d[openKey]);
+  const getClose = (d: T) => Number(d[closeKey]);
 
   // Scales
-  const validData = useMemo(() => {
-    return data.filter(d => {
-      const date = getX(d);
-      return date instanceof Date && !isNaN(date.getTime());
-    });
-  }, [data, getX]);
-
   const xScale = useMemo(
     () =>
       scaleTime({
         range: [0, xMax],
         domain: [
-          Math.min(...validData.map(d => getX(d).getTime())) || 0,
-          Math.max(...validData.map(d => getX(d).getTime())) || 0
+          min(data, getX) || new Date(),
+          max(data, getX) || new Date()
         ],
       }),
-    [xMax, validData, xKey],
+    [xMax, data, xKey],
   );
 
   const yScale = useMemo(
@@ -93,13 +100,16 @@ function AreaChartContent<T>({
       scaleLinear<number>({
         range: [yMax, 0],
         round: true,
-        domain: [0, Math.max(...validData.map(d => keys.reduce((acc, k) => acc + (Number((d as any)[k]) || 0), 0))) * 1.1 || 100],
+        domain: [
+          (min(data, getLow) || 0) * 0.95, // Add some padding
+          (max(data, getHigh) || 0) * 1.05
+        ],
         nice: true,
       }),
-    [yMax, validData, keys],
+    [yMax, data, highKey, lowKey],
   );
 
-  // Tooltip - Simplified for AreaStack (just showing nearest X for now)
+  // Tooltip
   const {
     tooltipOpen,
     tooltipLeft,
@@ -113,29 +123,10 @@ function AreaChartContent<T>({
     scroll: true,
   });
 
-  const bisectDate = bisector<T, Date>(d => getX(d)).left;
-
-  const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
-    const { x } = localPoint(event) || { x: 0 };
-    const x0 = xScale.invert(x - margin.left);
-    const index = bisectDate(data, x0, 1);
-    const d0 = data[index - 1];
-    const d1 = data[index];
-    let d = d0;
-    if (d1 && getX(d1)) {
-      d = x0.valueOf() - getX(d0).valueOf() > getX(d1).valueOf() - x0.valueOf() ? d1 : d0;
-    }
-
-    if (d) {
-      showTooltip({
-        tooltipData: d,
-        tooltipLeft: xScale(getX(d)) + margin.left,
-        tooltipTop: yScale(0) + margin.top, // Snap to bottom or follow mouse
-      });
-    }
-  };
-
   if (width < 10 || height < 100) return null;
+
+  // Calculate candle width dynamically based on data density
+  const candleWidth = Math.max(1, (xMax / data.length) * 0.7);
 
   return (
     <div className={cn("relative", className)}>
@@ -155,7 +146,7 @@ function AreaChartContent<T>({
               stroke="hsl(var(--border, 214.3 31.8% 91.4%))"
               tickStroke="hsl(var(--border, 214.3 31.8% 91.4%))"
               label={xAxisLabel}
-              numTicks={Math.min(5, data.length)}
+              numTicks={width > 500 ? 10 : 5}
               labelProps={{
                 fill: "hsl(var(--muted-foreground, 215.4 16.3% 46.9%))",
                 fontSize: 12,
@@ -192,43 +183,48 @@ function AreaChartContent<T>({
             />
           )}
 
-          <AreaStack
-            data={data}
-            keys={keys as string[]}
-            x={d => xScale(getX(d.data)) ?? 0}
-            y0={d => yScale(getY0(d)) ?? 0}
-            y1={d => yScale(getY1(d)) ?? 0}
-          >
-            {({ stacks, path }) =>
-              stacks.map((stack, i) => {
-                const color = colors[i % colors.length];
-                const isHex = color.startsWith('#');
-                return (
-                  <path
-                    key={`stack-${stack.key}`}
-                    d={path(stack) || ''}
-                    stroke="transparent"
-                    fill={isHex ? color : undefined}
-                    // Use currentColor to inherit color from text-class only if not hex
-                    className={cn("opacity-80 hover:opacity-100 transition-opacity", !isHex && "fill-current", !isHex && color)}
-                  />
-                )
-              })
-            }
-          </AreaStack>
+          {data.map((d, i) => {
+            const x = xScale(getX(d));
+            const open = getOpen(d);
+            const close = getClose(d);
+            const high = getHigh(d);
+            const low = getLow(d);
+            const isUp = close > open;
+            const color = isUp ? upColor : downColor;
 
-          {/* Invisible Overlay for Tooltip */}
-          <rect
-            x={0}
-            y={0}
-            width={xMax}
-            height={yMax}
-            fill="transparent"
-            onTouchStart={handleTooltip}
-            onTouchMove={handleTooltip}
-            onMouseMove={handleTooltip}
-            onMouseLeave={() => hideTooltip()}
-          />
+            const barY = yScale(Math.max(open, close));
+            const barHeight = Math.abs(yScale(open) - yScale(close));
+
+            return (
+              <Group key={`candle-${i}`}>
+                {/* Wick */}
+                <Line
+                  from={{ x: x, y: yScale(high) }}
+                  to={{ x: x, y: yScale(low) }}
+                  stroke={color}
+                  strokeWidth={1}
+                />
+                {/* Body */}
+                <Bar
+                  x={x - candleWidth / 2}
+                  y={barY}
+                  width={candleWidth}
+                  height={Math.max(1, barHeight)} // Ensure at least 1px height
+                  fill={color}
+                  className="hover:opacity-80 cursor-pointer"
+                  onMouseLeave={() => hideTooltip()}
+                  onMouseMove={(event) => {
+                    const { x: tX, y: tY } = localPoint(event) || { x: 0, y: 0 };
+                    showTooltip({
+                      tooltipData: d,
+                      tooltipTop: tY,
+                      tooltipLeft: tX,
+                    });
+                  }}
+                />
+              </Group>
+            );
+          })}
         </Group>
       </svg>
       {tooltipOpen && tooltipData && (
@@ -237,15 +233,23 @@ function AreaChartContent<T>({
           left={tooltipLeft}
           style={{ ...defaultStyles, padding: 0, borderRadius: 0, boxShadow: 'none', background: 'transparent', zIndex: 50 }}
         >
-          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-lg">
-            <p className="font-semibold text-xs text-muted-foreground mb-1">{getX(tooltipData).toLocaleDateString()}</p>
-            {keys.map((key, i) => (
-              <div key={key as string} className="flex items-center gap-2">
-                <div className={cn("w-2 h-2 rounded-full bg-current", colors[i % colors.length])} />
-                <span className="text-xs capitalize">{key as string}:</span>
-                <span className="font-mono text-xs font-bold">{String(tooltipData[key])}</span>
-              </div>
-            ))}
+          <div className="rounded-md border bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-900 dark:text-slate-100 shadow-xl">
+            <p className="font-semibold text-xs text-muted-foreground mb-1">
+              {getX(tooltipData).toLocaleDateString()}
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+              <span className="text-muted-foreground">Open</span>
+              <span className="font-mono font-medium text-right">{getOpen(tooltipData).toFixed(2)}</span>
+
+              <span className="text-muted-foreground">High</span>
+              <span className="font-mono font-medium text-right text-green-600">{getHigh(tooltipData).toFixed(2)}</span>
+
+              <span className="text-muted-foreground">Low</span>
+              <span className="font-mono font-medium text-right text-red-600">{getLow(tooltipData).toFixed(2)}</span>
+
+              <span className="text-muted-foreground">Close</span>
+              <span className="font-mono font-bold text-right">{getClose(tooltipData).toFixed(2)}</span>
+            </div>
           </div>
         </TooltipInPortal>
       )}
@@ -253,11 +257,11 @@ function AreaChartContent<T>({
   );
 }
 
-export const AreaChart = <T,>(props: AreaChartProps<T>) => {
+export const CandlestickChart = <T,>(props: CandlestickChartProps<T>) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
-        {({ width, height }) => <AreaChartContent {...props} width={width} height={height} />}
+        {({ width, height }) => <CandlestickChartContent {...props} width={width} height={height} />}
       </ParentSize>
     </div>
   )

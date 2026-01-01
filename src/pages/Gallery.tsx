@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { BarChart } from '../components/waffle/BarChart';
+import { CandlestickChart } from '../components/waffle/CandlestickChart';
 import { LineChart } from '../components/waffle/LineChart';
 import { PieChart } from '../components/waffle/PieChart';
 import { AreaChart } from '../components/waffle/AreaChart';
@@ -10,7 +11,7 @@ import { TreemapChart } from '../components/waffle/TreemapChart';
 import { BubbleChart } from '../components/waffle/BubbleChart';
 import { SankeyChart } from '../components/waffle/SankeyChart';
 import { CompositeChart } from '../components/waffle/CompositeChart';
-import { ChordChartPage } from './pages/charts/ChordChartPage';
+import { ChordChart } from '../components/waffle/ChordChart';
 import { StatCard } from '../components/waffle/StatCard';
 
 const barData = [
@@ -75,8 +76,32 @@ const bubbleData = Array.from({ length: 15 }, () => ({
   z: Math.random() * 50 + 10,
 }));
 
+// Sample Data for Candlestick
+const candleData = [
+  { date: new Date('2024-01-01'), open: 150, high: 155, low: 148, close: 153 },
+  { date: new Date('2024-01-02'), open: 153, high: 158, low: 152, close: 157 },
+  { date: new Date('2024-01-03'), open: 157, high: 160, low: 155, close: 155 }, // Bearish
+  { date: new Date('2024-01-04'), open: 155, high: 157, low: 150, close: 152 }, // Bearish
+  { date: new Date('2024-01-05'), open: 152, high: 159, low: 151, close: 158 }, // Bullish
+  { date: new Date('2024-01-06'), open: 158, high: 162, low: 157, close: 161 },
+  { date: new Date('2024-01-07'), open: 161, high: 165, low: 160, close: 163 },
+  { date: new Date('2024-01-08'), open: 163, high: 163, low: 158, close: 159 }, // Bearish
+];
+
 const charts = [
   { name: "Bar Chart", path: "/docs/bar-chart", tags: ["Comparison", "Distribution"], component: <BarChart data={barData} width={300} height={200} xKey="letter" yKey="frequency" /> },
+  {
+    name: "Candlestick Chart", path: "/docs/candlestick-chart", tags: ["Financial", "Time-Series"], component: <CandlestickChart
+      data={candleData}
+      width={300}
+      height={200}
+      xKey="date"
+      openKey="open"
+      highKey="high"
+      lowKey="low"
+      closeKey="close"
+    />
+  },
   { name: "Line Chart", path: "/docs/line-chart", tags: ["Trend", "Time-Series"], component: <LineChart data={dateData} width={300} height={200} xKey="date" yKey="value" /> },
   { name: "Area Chart", path: "/docs/area-chart", tags: ["Trend", "Volume"], component: <AreaChart data={dateData} width={300} height={200} xKey="date" keys={['value']} /> },
   { name: "Pie Chart", path: "/docs/pie-chart", tags: ["Proportion"], component: <PieChart data={pieData} width={300} height={200} labelKey="label" valueKey="value" /> },
@@ -117,16 +142,16 @@ const charts = [
       keys={['A', 'B', 'C']}
     />
   },
+
+  {
+    name: "Stat Card", path: "/docs/stat-card", tags: ["KPI", "UI", "Metric"], component: <StatCard
+      label="Total Revenue"
+      value="$12,345"
+      description="+15% vs last month"
+      icon="dollar"
+      trend={{ value: 15, direction: 'up' }}
+    />
   },
-{
-  name: "Stat Card", path: "/docs/stat-card", tags: ["KPI", "UI", "Metric"], component: <StatCard
-    label="Total Revenue"
-    value="$12,345"
-    description="+15% vs last month"
-    icon="dollar"
-    trend={{ value: 15, direction: 'up' }}
-  />
-},
 ];
 
 import { useState, useMemo } from 'react';

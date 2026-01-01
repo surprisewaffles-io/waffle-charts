@@ -22,6 +22,7 @@ export type PieChartProps<T> = {
     subtitle?: string;
   };
   margin?: { top: number; right: number; bottom: number; left: number };
+  onClick?: (data: T) => void;
 };
 
 type PieChartContentProps<T> = PieChartProps<T> & {
@@ -39,7 +40,8 @@ function PieChartContent<T>({
   innerRadius = 0, // Default to full pie
   colors,
   centerText,
-  margin: customMargin
+  margin: customMargin,
+  onClick
 }: PieChartContentProps<T>) {
   const defaultMargin = { top: 20, right: 20, bottom: 20, left: 20 };
   const margin = { ...defaultMargin, ...customMargin };
@@ -120,6 +122,7 @@ function PieChartContent<T>({
                       // If colors are passed as specific colors (not classes), you might use fill={...} instead. 
                       // This implementation supports both hex colors and Tailwind TEXT color classes (e.g. 'text-blue-500'),
                       // which fill-current will inherit.
+                      onClick={() => onClick?.(arc.data)}
                       onMouseEnter={() => {
                         setActiveShape(index);
                         showTooltip({

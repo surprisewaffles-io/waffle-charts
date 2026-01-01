@@ -35,25 +35,49 @@ export function BarChartPage() {
       </ComponentPreview>
 
       <div className="p-6 border rounded-lg shadow-sm">
-        <h3 className="font-semibold mb-4">Custom Colors</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="h-[200px] w-full">
+        <h3 className="font-semibold mb-4">Stacked Bar Chart</h3>
+        <ComponentPreview
+          title="Stacked Bar Chart"
+          description="Stack multiple metrics on top of each other."
+          code={BarChartSource}
+        >
+          <div className="h-[400px] w-full">
             <BarChart
-              data={data.slice(0, 4)}
-              xKey="letter"
-              yKey="frequency"
-              barColor="#6366f1"
+              data={[
+                { month: 'Jan', organic: 400, paid: 200, referral: 100 },
+                { month: 'Feb', organic: 300, paid: 300, referral: 150 },
+                { month: 'Mar', organic: 500, paid: 250, referral: 200 },
+              ]}
+              xKey="month"
+              variant="stacked"
+              keys={['organic', 'paid', 'referral']}
+              colors={['#10b981', '#3b82f6', '#8b5cf6']}
             />
           </div>
-          <div className="h-[200px] w-full">
+        </ComponentPreview>
+      </div>
+
+      <div className="p-6 border rounded-lg shadow-sm">
+        <h3 className="font-semibold mb-4">Grouped Bar Chart</h3>
+        <ComponentPreview
+          title="Grouped Bar Chart"
+          description="Compare metrics side-by-side."
+          code={BarChartSource}
+        >
+          <div className="h-[400px] w-full">
             <BarChart
-              data={data.slice(0, 4)}
-              xKey="letter"
-              yKey="frequency"
-              barColor="#f97316"
+              data={[
+                { category: 'Product A', q1: 10, q2: 20, q3: 15 },
+                { category: 'Product B', q1: 15, q2: 25, q3: 20 },
+                { category: 'Product C', q1: 8, q2: 12, q3: 10 },
+              ]}
+              xKey="category"
+              variant="grouped"
+              keys={['q1', 'q2', 'q3']}
+              colors={['#f59e0b', '#ec4899', '#6366f1']}
             />
           </div>
-        </div>
+        </ComponentPreview>
       </div>
     </div>
   );
