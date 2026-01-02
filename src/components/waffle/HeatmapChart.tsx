@@ -57,13 +57,16 @@ function HeatmapChartContent({
   const yScale = useMemo(
     () =>
       scaleLinear<number>({
-        domain: [0, data[0].bins.length],
+        domain: [0, (data && data[0] && data[0].bins) ? data[0].bins.length : 0],
         range: [yMax, 0],
       }),
     [yMax, data],
   );
 
-  const maxCount = Math.max(...data.flatMap((d) => d.bins.map((b) => b.count)));
+  // Defensive Check
+  if (!Array.isArray(data) || data.length === 0) return null;
+
+  const maxCount = Math.max(...data.flatMap((d) => (d.bins ? d.bins.map((b) => b.count) : [])));
   const colorScale = useMemo(
     () =>
       scaleLinear<string>({
@@ -94,7 +97,7 @@ function HeatmapChartContent({
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
         <Group left={margin.left} top={margin.top}>
           <HeatmapRect<HeatmapData, { bin: number; count: number }>
-            data={data}
+            data={data.filter(d => Array.isArray(d.bins))}
             xScale={xScale}
             yScale={yScale}
             colorScale={colorScale}

@@ -39,7 +39,7 @@ function AreaChartContent<T>({
   width,
   height,
   xKey,
-  keys,
+  keys = [],
   colors = ['#a855f7', '#ec4899'],
   className,
   showXAxis = true,
@@ -93,7 +93,10 @@ function AreaChartContent<T>({
       scaleLinear<number>({
         range: [yMax, 0],
         round: true,
-        domain: [0, Math.max(...validData.map(d => keys.reduce((acc, k) => acc + (Number((d as any)[k]) || 0), 0))) * 1.1 || 100],
+        domain: [
+          0,
+          Math.max(...validData.map(d => keys.reduce((acc, k) => acc + (Number((d as any)[k]) || 0), 0))) * 1.1 || 100
+        ],
         nice: true,
       }),
     [yMax, validData, keys],
