@@ -29,6 +29,27 @@ npx waffle-charts-cli add bar-chart line-chart
 
 ## Available Charts
 
+- React 16+
+- Tailwind CSS configured in your project.
+
+## Prerequisites
+
+The components assume you have a `cn` utility for class merging (standard in shadcn/ui projects).
+
+**`lib/utils.ts`**
+```ts
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+```
+
+If your utils are located elsewhere, you may need to update the imports in the added components.
+
+## Available Charts
+
 | Chart | Command | Description |
 | :--- | :--- | :--- |
 | **Bar Chart** | `bar-chart` | Standard vertical bar chart for categorical data. |
@@ -41,18 +62,10 @@ npx waffle-charts-cli add bar-chart line-chart
 | **Heatmap** | `heatmap-chart` | Grid-based density visualization. |
 | **Treemap** | `treemap-chart` | Hierarchical data visualization. |
 | **Sankey** | `sankey-chart` | Flow and process visualization. |
-| **Composite** | `composite-chart` | **New!** Dual-axis Bar + Line combination. |
-
-## What it does
-
-1.  **Checks dependencies**: Detects if you have the necessary `@visx` packages (`shape`, `scale`, `axis`, etc.) and installs them if missing.
-2.  **Copies code**: Downloads the component source code to `src/components/waffle/` (or your configured directory).
-3.  **Zero Lock-in**: Once added, the code is yours.
-
-## Requirements
-
-- React 16+
-- Tailwind CSS configured in your project.
+| **Composite** | `composite-chart` | Dual-axis Bar + Line combination. |
+| **Funnel Chart** | `funnel-chart` | **New!** Process flow stages and conversion. |
+| **Radial Bar** | `radial-bar-chart` | **New!** Circular gauge/progress visualization. |
+| **Legend** | `chart-legend` | **New!** Reusable chart legend component. |
 
 ## License
 

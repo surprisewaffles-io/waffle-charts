@@ -30,6 +30,8 @@ npm install @visx/shape @visx/group @visx/scale @visx/responsive @visx/tooltip @
 ```
 Then copy the component code from the [documentation](https://surprisewaffles-io.github.io/waffle-charts).
 
+> **Note**: WaffleCharts assumes you have a `cn` class merging utility (standard in shadcn/ui) available at `lib/utils` or similar.
+
 ## Contributing
 Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.
 

@@ -63,5 +63,20 @@ export const registry = {
     file: "CandlestickChart.tsx",
     label: "Candlestick Chart",
     dependencies: ["@visx/group", "@visx/scale", "@visx/shape", "@visx/axis", "@visx/grid", "@visx/responsive", "@visx/tooltip", "@visx/event", "d3-array", "clsx", "tailwind-merge"],
+  },
+  "chart-legend": {
+    file: "ChartLegend.tsx",
+    label: "Chart Legend",
+    dependencies: ["clsx", "tailwind-merge"],
+  },
+  "funnel-chart": {
+    file: "FunnelChart.tsx",
+    label: "Funnel Chart",
+    dependencies: ["@visx/group", "@visx/responsive", "@visx/scale", "@visx/tooltip", "clsx", "tailwind-merge"],
+  },
+  "radial-bar-chart": {
+    file: "RadialBarChart.tsx",
+    label: "Radial Bar Chart",
+    dependencies: ["@visx/group", "@visx/shape", "@visx/scale", "@visx/responsive", "@visx/tooltip", "clsx", "tailwind-merge"],
   }
 };
