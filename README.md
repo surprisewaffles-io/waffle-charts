@@ -6,7 +6,12 @@ Modeled after the philosophy of [shadcn/ui](https://ui.shadcn.com).
 ## Philosophy
 WaffleCharts is not a library you install. It's a collection of primitives you copy into your project. You own the code, the DOM, and the styling.
 
-## New in v0.1.5
+## New in v0.1.6
+- **Funnel Chart**: Added `FunnelChart` for process and conversion visualization.
+- **Radial Bar**: Added `RadialBarChart` for circular progress and comparison.
+- **Legends**: Added `ChartLegend` component for consistent legend rendering.
+
+### v0.1.5 Highlights
 - **Financial Charts**: Added `CandlestickChart` for OHLC financial data visualization.
 - **Vibrant Defaults**: Charts now look great out-of-the-box with a standardized purple/pink palette.
 - **Hex Color Support**: Pass explicit hex codes (e.g., `#a855f7`) or Tailwind classes typesafe props.
