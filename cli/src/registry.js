@@ -78,5 +78,10 @@ export const registry = {
     file: "RadialBarChart.tsx",
     label: "Radial Bar Chart",
     dependencies: ["@visx/group", "@visx/shape", "@visx/scale", "@visx/responsive", "@visx/tooltip", "clsx", "tailwind-merge"],
+  },
+  "waffle-chart": {
+    file: "WaffleChart.tsx",
+    label: "Waffle Chart",
+    dependencies: ["@visx/group", "@visx/responsive", "@visx/scale", "@visx/tooltip", "clsx", "tailwind-merge"],
   }
 };

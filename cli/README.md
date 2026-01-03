@@ -65,6 +65,7 @@ If your utils are located elsewhere, you may need to update the imports in the a
 | **Composite** | `composite-chart` | Dual-axis Bar + Line combination. |
 | **Funnel Chart** | `funnel-chart` | **New!** Process flow stages and conversion. |
 | **Radial Bar** | `radial-bar-chart` | **New!** Circular gauge/progress visualization. |
+| **Waffle Chart** | `waffle-chart` | **New!** 10x10 Grid for parts-to-whole visualization. |
 | **Legend** | `chart-legend` | **New!** Reusable chart legend component. |
 
 ## License

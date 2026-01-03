@@ -15,6 +15,7 @@ import { ChordChart } from '../components/waffle/ChordChart';
 import { StatCard } from '../components/waffle/StatCard';
 import { FunnelChart } from '../components/waffle/FunnelChart';
 import { RadialBarChart } from '../components/waffle/RadialBarChart';
+import { WaffleChart } from '../components/waffle/WaffleChart';
 
 const barData = [
   { letter: 'A', frequency: 0.08167 },
@@ -174,6 +175,17 @@ const charts = [
       ]}
       width={300} height={200}
       valueKey="value" labelKey="name"
+    />
+  },
+  {
+    name: "Waffle Chart", path: "/docs/waffle-chart", tags: ["Proportion"], component: <WaffleChart
+      data={[
+        { name: 'A', value: 30, color: '#a855f7' },
+        { name: 'B', value: 20, color: '#ec4899' },
+        { name: 'C', value: 50, color: '#e5e7eb' },
+      ]}
+      valueKey="value" labelKey="name"
+      colors={['#a855f7', '#ec4899', '#e5e7eb']}
     />
   },
 ];

@@ -17,6 +17,7 @@ import { CandlestickChartPage } from './pages/charts/CandlestickChartPage';
 import { StatCardPage } from './pages/charts/StatCardPage';
 import { FunnelChartPage } from './pages/charts/FunnelChartPage';
 import { RadialBarChartPage } from './pages/charts/RadialBarChartPage';
+import { WaffleChartPage } from './pages/charts/WaffleChartPage';
 import { GalleryPage } from './pages/Gallery';
 import { ThemeProvider } from './components/theme-provider';
 
@@ -44,6 +45,7 @@ function App() {
             <Route path="docs/stat-card" element={<StatCardPage />} />
             <Route path="docs/funnel-chart" element={<FunnelChartPage />} />
             <Route path="docs/radial-bar-chart" element={<RadialBarChartPage />} />
+            <Route path="docs/waffle-chart" element={<WaffleChartPage />} />
             {/* Catch all */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>

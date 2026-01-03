@@ -9,6 +9,7 @@ WaffleCharts is not a library you install. It's a collection of primitives you c
 ## New in v0.1.6
 - **Funnel Chart**: Added `FunnelChart` for process and conversion visualization.
 - **Radial Bar**: Added `RadialBarChart` for circular progress and comparison.
+- **Waffle Chart**: Added `WaffleChart` for parts-to-whole visualization.
 - **Legends**: Added `ChartLegend` component for consistent legend rendering.
 
 ### v0.1.5 Highlights

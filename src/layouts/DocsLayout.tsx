@@ -21,6 +21,7 @@ const sidebarItems = [
   { title: "Stat Card", path: "/docs/stat-card" },
   { title: "Funnel Chart", path: "/docs/funnel-chart" },
   { title: "Radial Bar Chart", path: "/docs/radial-bar-chart" },
+  { title: 'Waffle Chart', path: '/docs/waffle-chart' },
 ];
 
 export function DocsLayout() {
