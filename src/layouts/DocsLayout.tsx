@@ -19,6 +19,8 @@ const sidebarItems = [
   { title: "Bubble Chart", path: "/docs/bubble-chart" },
   { title: "Candlestick Chart", path: "/docs/candlestick-chart" },
   { title: "Stat Card", path: "/docs/stat-card" },
+  { title: "Funnel Chart", path: "/docs/funnel-chart" },
+  { title: "Radial Bar Chart", path: "/docs/radial-bar-chart" },
 ];
 
 export function DocsLayout() {

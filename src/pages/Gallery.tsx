@@ -13,6 +13,8 @@ import { SankeyChart } from '../components/waffle/SankeyChart';
 import { CompositeChart } from '../components/waffle/CompositeChart';
 import { ChordChart } from '../components/waffle/ChordChart';
 import { StatCard } from '../components/waffle/StatCard';
+import { FunnelChart } from '../components/waffle/FunnelChart';
+import { RadialBarChart } from '../components/waffle/RadialBarChart';
 
 const barData = [
   { letter: 'A', frequency: 0.08167 },
@@ -150,6 +152,28 @@ const charts = [
       description="+15% vs last month"
       icon="dollar"
       trend={{ value: 15, direction: 'up' }}
+    />
+  },
+  {
+    name: "Funnel Chart", path: "/docs/funnel-chart", tags: ["Process", "Conversion"], component: <FunnelChart
+      data={[
+        { step: 'A', value: 100 },
+        { step: 'B', value: 80 },
+        { step: 'C', value: 50 },
+        { step: 'D', value: 20 },
+      ]}
+      width={300} height={200}
+      stepKey="step" valueKey="value"
+    />
+  },
+  {
+    name: "Radial Bar", path: "/docs/radial-bar-chart", tags: ["Comparison", "Circular"], component: <RadialBarChart
+      data={[
+        { name: 'A', value: 80, fill: '#3b82f6' },
+        { name: 'B', value: 50, fill: '#10b981' },
+      ]}
+      width={300} height={200}
+      valueKey="value" labelKey="name"
     />
   },
 ];
