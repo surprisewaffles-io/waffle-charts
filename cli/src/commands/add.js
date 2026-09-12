@@ -41,7 +41,22 @@ export async function add(component, options) {
     }
   }
 
+  // Reject null bytes and other malicious patterns (check before path operations)
+  if (options.path.includes('\0')) {
+    console.error(chalk.red(`Error: Invalid path "${options.path}". Path contains illegal characters.`));
+    process.exit(1);
+  }
+
   const targetDir = path.resolve(process.cwd(), options.path);
+
+  // Validate path to prevent directory traversal attacks
+  const relativePath = path.relative(process.cwd(), targetDir);
+
+  // Reject paths that escape the current working directory
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    console.error(chalk.red(`Error: Invalid path "${options.path}". Path must be within the current directory.`));
+    process.exit(1);
+  }
 
   // 3. Ensure target directory exists
   if (!fs.existsSync(targetDir)) {
