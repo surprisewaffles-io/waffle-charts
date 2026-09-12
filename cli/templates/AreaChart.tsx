@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { AreaStack } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleTime, scaleLinear } from '@visx/scale';
@@ -18,6 +18,8 @@ export type AreaChartProps<T> = {
   className?: string;
   width?: number;
   height?: number;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type AreaChartContentProps<T> = AreaChartProps<T> & {
@@ -33,41 +35,49 @@ function AreaChartContent<T>({
   keys,
   colors = ['text-blue-500', 'text-indigo-500', 'text-purple-500'],
   className,
+  emptyMessage = 'No data to display',
 }: AreaChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => new Date(d[xKey] as string | number | Date);
+  // Every hook below runs unconditionally, and the empty-data guard sits after
+  // them, so the hook count never varies between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors. getX is memoised so the scale memos below actually cache.
+  const getX = useCallback((d: T) => new Date(d[xKey] as string | number | Date), [xKey]);
   const getY0 = (d: unknown) => (d as { [key: string]: number })[0];
   const getY1 = (d: unknown) => (d as { [key: string]: number })[1];
 
+  // Rows whose xKey does not parse to a real date cannot be positioned.
+  const validData = useMemo(
+    () => safeData.filter(d => !Number.isNaN(getX(d).getTime())),
+    [safeData, getX],
+  );
 
   // Scales
-  const xScale = useMemo(
-    () =>
-      scaleTime({
-        range: [0, xMax],
-        domain: [Math.min(...data.map(d => getX(d).getTime())), Math.max(...data.map(d => getX(d).getTime()))],
-      }),
-    [xMax, data, xKey],
-  );
+  const xScale = useMemo(() => {
+    const times = validData.map(d => getX(d).getTime());
+    // Math.min/max spread over an empty array yield Infinity/-Infinity, which
+    // are truthy — a `|| 0` fallback never fires and the domain is inverted.
+    const domain: [number, number] = times.length
+      ? [Math.min(...times), Math.max(...times)]
+      : [0, 0];
+    return scaleTime({ range: [0, xMax], domain });
+  }, [xMax, validData, getX]);
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [yMax, 0],
-        round: true,
-        // Calculate max value from stacked data could be complex, assuming simplistic sum or finding max from data
-        // For accurate stacking, we should ideally calculate the max stack value.
-        // For this demo, let's just make sure we cover the data range generously.
-        domain: [0, Math.max(...data.map(d => keys.reduce((acc, k) => acc + Number(d[k]), 0))) * 1.1],
-        nice: true,
-      }),
-    [yMax, data, keys],
-  );
+  const yScale = useMemo(() => {
+    const totals = validData.map(d => keys.reduce((acc, k) => acc + (Number(d[k]) || 0), 0));
+    const peak = totals.length ? Math.max(...totals) : 0;
+    return scaleLinear<number>({
+      range: [yMax, 0],
+      round: true,
+      domain: [0, peak > 0 ? peak * 1.1 : 100],
+      nice: true,
+    });
+  }, [yMax, validData, keys]);
 
   // Tooltip - Simplified for AreaStack (just showing nearest X for now)
   const {
@@ -88,11 +98,11 @@ function AreaChartContent<T>({
   const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
     const { x } = localPoint(event) || { x: 0 };
     const x0 = xScale.invert(x - margin.left);
-    const index = bisectDate(data, x0, 1);
-    const d0 = data[index - 1];
-    const d1 = data[index];
+    const index = bisectDate(validData, x0, 1);
+    const d0 = validData[index - 1];
+    const d1 = validData[index];
     let d = d0;
-    if (d1 && getX(d1)) {
+    if (d0 && d1) {
       d = x0.valueOf() - getX(d0).valueOf() > getX(d1).valueOf() - x0.valueOf() ? d1 : d0;
     }
 
@@ -106,6 +116,21 @@ function AreaChartContent<T>({
   };
 
   if (width < 10) return null;
+
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)}>
@@ -139,7 +164,7 @@ function AreaChartContent<T>({
           />
 
           <AreaStack
-            data={data}
+            data={validData}
             keys={keys as string[]}
             x={d => xScale(getX(d.data)) ?? 0}
             y0={d => yScale(getY0(d)) ?? 0}

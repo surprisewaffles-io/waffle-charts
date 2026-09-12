@@ -97,3 +97,63 @@ describe('AreaChart', () => {
     }
   });
 });
+
+describe('AreaChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the double assertion reproduces
+  // that without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<AreaChart data={[]} xKey="date" keys={['a', 'b']} />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(
+      <AreaChart data={[]} xKey="date" keys={['a', 'b']} emptyMessage="Nothing tracked yet" />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing tracked yet');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<AreaChart data={asData(value)} xKey="date" keys={['a', 'b']} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has an unparseable date', () => {
+    render(
+      <AreaChart
+        data={[{ date: 'not-a-date', a: 1, b: 2 }]}
+        xKey="date"
+        keys={['a', 'b']}
+      />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single data point', () => {
+    const { container } = render(
+      <AreaChart data={[mockData[0]]} xKey="date" keys={['a', 'b']} />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('produces finite scale geometry rather than Infinity for a single point', () => {
+    const { container } = render(
+      <AreaChart data={[mockData[0]]} xKey="date" keys={['a', 'b']} />,
+    );
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { rerender } = render(<AreaChart data={[]} xKey="date" keys={['a', 'b']} />);
+    rerender(<AreaChart data={mockData} xKey="date" keys={['a', 'b']} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(document.querySelectorAll('path').length).toBeGreaterThanOrEqual(2);
+  });
+});

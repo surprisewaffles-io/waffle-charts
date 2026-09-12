@@ -6,6 +6,9 @@ Modeled after the philosophy of [shadcn/ui](https://ui.shadcn.com).
 ## Philosophy
 WaffleCharts is not a library you install. It's a collection of primitives you copy into your project. You own the code, the DOM, and the styling.
 
+## Unreleased
+- **Empty data**: `AreaChart` and `HeatmapChart` no longer break on empty, `null`, or `undefined` data. Both render a fallback message instead, customizable via the new `emptyMessage` prop.
+
 ## New in v0.1.6
 - **Funnel Chart**: Added `FunnelChart` for process and conversion visualization.
 - **Radial Bar**: Added `RadialBarChart` for circular progress and comparison.

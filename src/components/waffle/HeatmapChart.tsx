@@ -22,6 +22,8 @@ export type HeatmapChartProps = {
   className?: string;
   colorRange?: [string, string]; // Hex colors for min/max
   gap?: number;
+  /** Rendered in place of the chart when `data` holds no plottable columns. */
+  emptyMessage?: string;
 };
 
 type HeatmapChartContentProps = HeatmapChartProps & {
@@ -36,45 +38,51 @@ function HeatmapChartContent({
   className,
   colorRange = ['#e2e8f0', '#0f172a'], // Default slate-200 to slate-900 (using hex for interpolation usually better, but Visx scale accepts colors)
   gap = 2,
+  emptyMessage = 'No data to display',
 }: HeatmapChartContentProps) {
   const margin = { top: 10, right: 10, bottom: 20, left: 20 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Helpers
-  const binWidth = xMax / data.length;
+  // Every hook below runs unconditionally. The previous early return sat
+  // between two useMemo calls, so a re-render with data after a render without
+  // it raised "Rendered more hooks than during the previous render".
+  const columns = useMemo(
+    () => (Array.isArray(data) ? data.filter((d) => Array.isArray(d.bins) && d.bins.length > 0) : []),
+    [data],
+  );
+
+  // Helpers. An empty column list would make this Infinity.
+  const binWidth = columns.length ? xMax / columns.length : 0;
 
   // Scales
   const xScale = useMemo(
     () =>
       scaleLinear<number>({
-        domain: [0, data.length],
+        domain: [0, columns.length],
         range: [0, xMax],
       }),
-    [xMax, data],
+    [xMax, columns],
   );
 
   const yScale = useMemo(
     () =>
       scaleLinear<number>({
-        domain: [0, (data && data[0] && data[0].bins) ? data[0].bins.length : 0],
+        domain: [0, columns[0]?.bins.length ?? 0],
         range: [yMax, 0],
       }),
-    [yMax, data],
+    [yMax, columns],
   );
 
-  // Defensive Check
-  if (!Array.isArray(data) || data.length === 0) return null;
-
-  const maxCount = Math.max(...data.flatMap((d) => (d.bins ? d.bins.map((b) => b.count) : [])));
-  const colorScale = useMemo(
-    () =>
-      scaleLinear<string>({
-        domain: [0, maxCount],
-        range: colorRange,
-      }),
-    [maxCount, colorRange],
-  );
+  const colorScale = useMemo(() => {
+    const counts = columns.flatMap((d) => d.bins.map((b) => b.count));
+    // Math.max spread over an empty array yields -Infinity, inverting the domain.
+    const maxCount = counts.length ? Math.max(...counts) : 0;
+    return scaleLinear<string>({
+      domain: [0, maxCount],
+      range: colorRange,
+    });
+  }, [columns, colorRange]);
 
   // Tooltip
   const {
@@ -92,12 +100,28 @@ function HeatmapChartContent({
 
   if (width < 10) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (columns.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative", className)}>
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
         <Group left={margin.left} top={margin.top}>
           <HeatmapRect<HeatmapData, { bin: number; count: number }>
-            data={data.filter(d => Array.isArray(d.bins))}
+            data={columns}
             xScale={xScale}
             yScale={yScale}
             colorScale={colorScale}
