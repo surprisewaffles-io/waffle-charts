@@ -7,7 +7,10 @@ Modeled after the philosophy of [shadcn/ui](https://ui.shadcn.com).
 WaffleCharts is not a library you install. It's a collection of primitives you copy into your project. You own the code, the DOM, and the styling.
 
 ## Unreleased
-- **Empty data**: `AreaChart` and `HeatmapChart` no longer break on empty, `null`, or `undefined` data. Both render a fallback message instead, customizable via the new `emptyMessage` prop.
+- **Empty data**: every chart now survives empty, `null`, or `undefined` data, rendering a fallback message instead of breaking. The message is customizable via the `emptyMessage` prop. Covers `AreaChart`, `HeatmapChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChordChart`, `CompositeChart`, `FunnelChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
+- **Hook ordering**: `CompositeChart` ran its size guard above its hooks, so a shrinking container changed the hook count between renders. Every chart's early returns now sit below all hooks.
+- **Scale domains**: charts no longer spread an empty array through `Math.min`/`Math.max`, which yielded `Infinity`/`-Infinity` domains, nor divide by a zero row count.
+- **Props are no longer mutated**: `SankeyChart` handed the caller's own arrays to d3-sankey, which rewrites link endpoints in place.
 
 ## New in v0.1.6
 - **Funnel Chart**: Added `FunnelChart` for process and conversion visualization.

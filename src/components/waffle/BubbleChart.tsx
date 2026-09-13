@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Group } from '@visx/group';
 import { Circle } from '@visx/shape';
 import { scaleLinear } from '@visx/scale';
@@ -22,6 +22,8 @@ export type BubbleChartProps<T> = {
   height?: number;
   minRadius?: number;
   maxRadius?: number;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 // Internal component
@@ -43,47 +45,65 @@ function BubbleChartContent<T>({
   colorScheme,
   minRadius = 4,
   maxRadius = 30,
+  emptyMessage = 'No data to display',
 }: BubbleChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => Number(d[xKey]);
-  const getY = (d: T) => Number(d[yKey]);
-  const getZ = (d: T) => Number(d[zKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => Number(d[xKey]), [xKey]);
+  const getY = useCallback((d: T) => Number(d[yKey]), [yKey]);
+  const getZ = useCallback((d: T) => Number(d[zKey]), [zKey]);
+
+  // A bubble needs all three coordinates to be positioned and sized.
+  const validData = useMemo(
+    () =>
+      safeData.filter(
+        d => Number.isFinite(getX(d)) && Number.isFinite(getY(d)) && Number.isFinite(getZ(d)),
+      ),
+    [safeData, getX, getY, getZ],
+  );
 
   // Scales
-  const xScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [0, xMax],
-        round: true,
-        domain: [0, Math.max(...data.map(getX)) * 1.1], // Add padding
-      }),
-    [xMax, data, xKey],
-  );
+  const xScale = useMemo(() => {
+    // Math.min/max spread over an empty array yield Infinity/-Infinity, which
+    // are truthy — a `|| 0` fallback never fires and the domain is unusable.
+    const peak = validData.length ? Math.max(...validData.map(getX)) : 0;
+    return scaleLinear<number>({
+      range: [0, xMax],
+      round: true,
+      domain: [0, peak > 0 ? peak * 1.1 : 1], // Add padding
+    });
+  }, [xMax, validData, getX]);
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [yMax, 0],
-        round: true,
-        domain: [0, Math.max(...data.map(getY)) * 1.1],
-      }),
-    [yMax, data, yKey],
-  );
+  const yScale = useMemo(() => {
+    const peak = validData.length ? Math.max(...validData.map(getY)) : 0;
+    return scaleLinear<number>({
+      range: [yMax, 0],
+      round: true,
+      domain: [0, peak > 0 ? peak * 1.1 : 1],
+    });
+  }, [yMax, validData, getY]);
 
-  const zScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [minRadius, maxRadius],
-        round: true,
-        domain: [Math.min(...data.map(getZ)), Math.max(...data.map(getZ))],
-      }),
-    [minRadius, maxRadius, data, zKey],
-  );
+  const zScale = useMemo(() => {
+    const sizes = validData.map(getZ);
+    const domain: [number, number] = sizes.length
+      ? [Math.min(...sizes), Math.max(...sizes)]
+      : [0, 1];
+    return scaleLinear<number>({
+      range: [minRadius, maxRadius],
+      round: true,
+      domain,
+    });
+  }, [minRadius, maxRadius, validData, getZ]);
 
   // Tooltip
   const {
@@ -100,6 +120,22 @@ function BubbleChartContent<T>({
   });
 
   if (width < 10) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)}>
@@ -136,7 +172,7 @@ function BubbleChartContent<T>({
               textAnchor: "middle",
             }}
           />
-          {data.map((d, i) => {
+          {validData.map((d, i) => {
             const cx = xScale(getX(d));
             const cy = yScale(getY(d));
             const r = zScale(getZ(d));

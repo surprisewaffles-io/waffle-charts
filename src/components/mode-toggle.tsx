@@ -1,5 +1,5 @@
 import { Moon, Sun } from "lucide-react"
-import { useTheme } from "./theme-provider"
+import { useTheme } from "./theme-context"
 import { cn } from "../lib/utils"
 
 export function ModeToggle({ className }: { className?: string }) {

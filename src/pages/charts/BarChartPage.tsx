@@ -1,6 +1,5 @@
 import { BarChart } from '../../components/waffle/BarChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import BarChartSource from '../../components/waffle/BarChart.tsx?raw';
 
 const data = [

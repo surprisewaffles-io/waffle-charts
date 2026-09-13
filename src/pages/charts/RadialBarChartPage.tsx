@@ -1,7 +1,6 @@
 import { RadialBarChart } from '../../components/waffle/RadialBarChart';
 import { ChartLegend } from '../../components/waffle/ChartLegend';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import RadialBarChartSource from '../../components/waffle/RadialBarChart.tsx?raw';
 
 const data = [

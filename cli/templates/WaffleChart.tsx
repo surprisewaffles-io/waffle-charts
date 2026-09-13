@@ -3,7 +3,7 @@ import { ParentSize } from '@visx/responsive';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { cn } from '../../lib/utils';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 
 export type WaffleChartProps<T> = {
   data: T[];
@@ -19,6 +19,8 @@ export type WaffleChartProps<T> = {
   className?: string;
   colors?: string[];
   testId?: string;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type WaffleChartContentProps<T> = WaffleChartProps<T> & {
@@ -46,26 +48,43 @@ function WaffleChartContent<T>({
   className,
   colors,
   testId = 'waffle-chart',
+  emptyMessage = 'No data to display',
 }: WaffleChartContentProps<T>) {
   const margin = { top: 0, right: 0, bottom: 0, left: 0 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Accessors
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors. getValue is memoised so the memos below actually cache — a
+  // fresh closure each render would invalidate them on every pass.
   const getLabel = (d: T) => String(d[labelKey]);
-  const getValue = (d: T) => Number(d[valueKey]);
+  const getValue = useCallback((d: T) => Number(d[valueKey]), [valueKey]);
+
+  // A segment without a finite value claims no cells.
+  const validData = useMemo(
+    () => safeData.filter(d => Number.isFinite(getValue(d))),
+    [safeData, getValue],
+  );
 
   // Color Scale
   const defaultColors = ['#a855f7', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
   const colorScale = scaleOrdinal({
-    domain: data.map((_, i) => i),
+    domain: validData.map((_, i) => i),
     range: colors || defaultColors,
   });
 
   // Cell Calculation
   const totalCells = rows * columns;
-  const dataTotal = useMemo(() => data.reduce((sum, d) => sum + getValue(d), 0), [data, valueKey]);
-  const effectiveTotal = total || dataTotal;
+  const dataTotal = useMemo(
+    () => validData.reduce((sum, d) => sum + getValue(d), 0),
+    [validData, getValue],
+  );
+  // A zero total would make every cell count NaN.
+  const effectiveTotal = total || dataTotal || 1;
 
   // Generate Cells
   // We need to assign each cell to a data segment.
@@ -75,7 +94,7 @@ function WaffleChartContent<T>({
     // Let's create a flat array of 'types'
     const flatMap: { type: 'data' | 'empty', d?: T, index?: number }[] = [];
 
-    data.forEach((d, i) => {
+    validData.forEach((d, i) => {
       const val = getValue(d);
       // Proportion of grid
       const count = Math.round((val / effectiveTotal) * totalCells);
@@ -108,7 +127,7 @@ function WaffleChartContent<T>({
     }
 
     return grid;
-  }, [data, rows, columns, effectiveTotal, totalCells, valueKey]);
+  }, [validData, rows, columns, effectiveTotal, totalCells, getValue]);
 
   // Layout
   // fit grid into width/height.
@@ -131,6 +150,23 @@ function WaffleChartContent<T>({
   });
 
   if (width < 10) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        data-testid={testId}
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)} data-testid={testId}>

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Bar, BarStack, BarGroup } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
@@ -36,7 +36,23 @@ export type BarChartProps<T> = {
   yDomain?: [number, number];
   tickFormat?: (value: string, index: number) => string;
   onClick?: (data: T) => void;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
+
+/**
+ * Discriminated by variant so the tooltip body narrows without casts. The
+ * multi-series arms carry the resolved value rather than the visx bar datum,
+ * whose generic row type cannot be indexed by an arbitrary key.
+ */
+type BarTooltipData<T> =
+  | { type: 'simple'; d: T }
+  | { type: 'stacked'; color?: string; key: string; value: number }
+  | { type: 'grouped'; color?: string; key: string; value: number };
+
+/** Reads an arbitrary string key off a generic row as a number. */
+const readKey = <T,>(d: T, key: string): number =>
+  Number((d as unknown as Record<string, unknown>)[key]) || 0;
 
 // Internal component with required dimensions
 type BarChartContentProps<T> = BarChartProps<T> & {
@@ -65,6 +81,7 @@ function BarChartContent<T>({
   yDomain,
   tickFormat,
   onClick,
+  emptyMessage = 'No data to display',
 }: BarChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -72,13 +89,28 @@ function BarChartContent<T>({
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => String(d[xKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => String(d[xKey]), [xKey]);
   // Helper for simple bar
-  const getY = (d: T) => yKey ? Number(d[yKey]) : 0;
+  const getY = useCallback((d: T) => (yKey ? Number(d[yKey]) : 0), [yKey]);
 
   // Effective Keys and Colors
-  const effectiveKeys = keys.length > 0 ? keys : (yKey ? [String(yKey)] : []);
+  const effectiveKeys = useMemo(
+    () => (keys.length > 0 ? keys : yKey ? [String(yKey)] : []),
+    [keys, yKey],
+  );
+
+  // A row is plottable when it carries a finite height for the active variant.
+  const validData = useMemo(() => {
+    if (variant === 'simple') return safeData.filter(d => Number.isFinite(getY(d)));
+    return safeData.filter(d => effectiveKeys.some(k => Number.isFinite(readKey(d, k))));
+  }, [safeData, variant, effectiveKeys, getY]);
 
   // Scales
   const xScale = useMemo(
@@ -86,10 +118,10 @@ function BarChartContent<T>({
       scaleBand<string>({
         range: [0, xMax],
         round: true,
-        domain: data.map(getX),
+        domain: validData.map(getX),
         padding: 0.4,
       }),
-    [xMax, data, xKey],
+    [xMax, validData, getX],
   );
 
   // Grouped Scale (Sub-scale)
@@ -105,26 +137,30 @@ function BarChartContent<T>({
 
   const yScale = useMemo(
     () => {
-      let maxY = 0;
+      // Math.max spread over an empty array yields -Infinity, which is truthy —
+      // a `|| 0` fallback never fires and the domain becomes unusable. Every
+      // branch below therefore reduces over a list it has already measured.
+      let heights: number[];
       if (variant === 'stacked') {
         // Calculate max stack
-        // Using any cast to handle generic complexity
-        maxY = Math.max(...data.map(d => effectiveKeys.reduce((acc, k) => acc + (Number((d as any)[k]) || 0), 0)));
+        heights = validData.map(d => effectiveKeys.reduce((acc, k) => acc + readKey(d, k), 0));
       } else if (variant === 'grouped') {
         // Calculate max group value
-        maxY = Math.max(...data.map(d => Math.max(...effectiveKeys.map(k => Number((d as any)[k]) || 0))));
+        heights = validData.flatMap(d => effectiveKeys.map(k => readKey(d, k)));
       } else {
         // Simple
-        maxY = Math.max(...data.map(getY));
+        heights = validData.map(getY);
       }
+      const finite = heights.filter(Number.isFinite);
+      const maxY = finite.length ? Math.max(...finite) : 0;
 
       return scaleLinear<number>({
         range: [yMax, 0],
         round: true,
-        domain: yDomain || [0, maxY * 1.1],
+        domain: yDomain || [0, maxY > 0 ? maxY * 1.1 : 100],
       });
     },
-    [yMax, data, variant, effectiveKeys, yKey, yDomain],
+    [yMax, validData, variant, effectiveKeys, yDomain, getY],
   );
 
   // Tooltip
@@ -135,13 +171,29 @@ function BarChartContent<T>({
     tooltipData,
     hideTooltip,
     showTooltip,
-  } = useTooltip<any>(); // simplify type for complex tooltip data
+  } = useTooltip<BarTooltipData<T>>();
 
   const { containerRef, TooltipInPortal } = useTooltipInPortal({
     scroll: true,
   });
 
   if (width < 10 || height < 100) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0 || effectiveKeys.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>
@@ -217,7 +269,7 @@ function BarChartContent<T>({
           {/* Stacked Variant */}
           {variant === 'stacked' && (
             <BarStack
-              data={data}
+              data={validData}
               keys={effectiveKeys}
               x={getX}
               xScale={xScale}
@@ -240,7 +292,12 @@ function BarChartContent<T>({
                       onMouseMove={(event) => {
                         const { x, y } = localPoint(event) || { x: 0, y: 0 };
                         showTooltip({
-                          tooltipData: { type: 'stacked', bar, key: bar.key },
+                          tooltipData: {
+                            type: 'stacked',
+                            color: bar.color,
+                            key: String(bar.key),
+                            value: readKey(bar.bar.data, String(bar.key)),
+                          },
                           tooltipTop: y,
                           tooltipLeft: x,
                         });
@@ -255,10 +312,13 @@ function BarChartContent<T>({
           {/* Grouped Variant */}
           {variant === 'grouped' && (
             <BarGroup
-              data={data as any[]}
+              // BarGroup constrains its datum to `object`, which an
+              // unconstrained `T` does not satisfy; the row shape is otherwise
+              // unchanged.
+              data={validData as unknown as Record<string, number>[]}
               keys={effectiveKeys}
               height={yMax}
-              x0={getX as any}
+              x0={getX as unknown as (d: Record<string, number>) => string}
               x0Scale={xScale}
               x1Scale={x1Scale}
               yScale={yScale}
@@ -276,12 +336,17 @@ function BarChartContent<T>({
                         height={bar.height}
                         fill={bar.color}
                         className="hover:opacity-80 transition-opacity cursor-pointer"
-                        onClick={() => onClick?.(data[barGroup.index])}
+                        onClick={() => onClick?.(validData[barGroup.index])}
                         onMouseLeave={() => hideTooltip()}
                         onMouseMove={(event) => {
                           const { x, y } = localPoint(event) || { x: 0, y: 0 };
                           showTooltip({
-                            tooltipData: { type: 'grouped', bar, key: bar.key, data: data[barGroup.index] },
+                            tooltipData: {
+                              type: 'grouped',
+                              color: bar.color,
+                              key: String(bar.key),
+                              value: bar.value,
+                            },
                             tooltipTop: y,
                             tooltipLeft: x + barGroup.x0,
                           });
@@ -295,7 +360,7 @@ function BarChartContent<T>({
           )}
 
           {/* Simple Variant (Default) */}
-          {variant === 'simple' && data.map((d) => {
+          {variant === 'simple' && validData.map((d) => {
             const letter = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = yMax - (yScale(getY(d)) ?? 0);
@@ -340,23 +405,15 @@ function BarChartContent<T>({
                 <p className="font-semibold">{String(getY(tooltipData.d))}</p>
                 <p className="text-xs text-muted-foreground">{String(getX(tooltipData.d))}</p>
               </>
-            ) : tooltipData.type === 'stacked' ? (
+            ) : (
               <>
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full" style={{ background: tooltipData.bar.color }} />
+                  <div className="w-2 h-2 rounded-full" style={{ background: tooltipData.color }} />
                   <span className="text-xs font-semibold capitalize">{tooltipData.key}</span>
                 </div>
-                <p className="text-lg font-bold">{tooltipData.bar.bar ? tooltipData.bar.bar.data[tooltipData.key] : '?'}</p>
+                <p className="text-lg font-bold">{tooltipData.value}</p>
               </>
-            ) : tooltipData.type === 'grouped' ? (
-              <>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-2 h-2 rounded-full" style={{ background: tooltipData.bar.color }} />
-                  <span className="text-xs font-semibold capitalize">{tooltipData.key}</span>
-                </div>
-                <p className="text-lg font-bold">{tooltipData.bar.value}</p>
-              </>
-            ) : null}
+            )}
           </div>
         </TooltipInPortal>
       )}

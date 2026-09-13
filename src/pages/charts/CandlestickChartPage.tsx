@@ -1,6 +1,5 @@
 import { CandlestickChart } from '../../components/waffle/CandlestickChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import CandlestickChartSource from '../../components/waffle/CandlestickChart.tsx?raw';
 
 const ohlcData = [
