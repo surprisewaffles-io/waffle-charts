@@ -127,3 +127,66 @@ describe('BarChart', () => {
     expect(bars.length).toBeGreaterThan(0);
   });
 });
+
+describe('BarChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<BarChart data={[]} xKey="label" yKey="value" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<BarChart data={[]} xKey="label" yKey="value" emptyMessage="Nothing measured" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing measured');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<BarChart data={asData(value)} xKey="label" yKey="value" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has a non-numeric value', () => {
+    render(<BarChart data={asData([{ label: 'A', value: 'nope' }])} xKey="label" yKey="value" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback for a stacked chart with no keys', () => {
+    render(<BarChart data={mockData} xKey="label" variant="stacked" keys={[]} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback for an empty stacked chart', () => {
+    render(<BarChart data={[]} xKey="label" variant="stacked" keys={['value']} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback for an empty grouped chart', () => {
+    render(<BarChart data={[]} xKey="label" variant="grouped" keys={['value']} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single data point', () => {
+    const { container } = render(<BarChart data={[mockData[0]]} xKey="label" yKey="value" />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThan(0);
+  });
+
+  it('produces finite geometry rather than Infinity for a single point', () => {
+    const { container } = render(<BarChart data={[mockData[0]]} xKey="label" yKey="value" />);
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<BarChart data={[]} xKey="label" yKey="value" />);
+    rerender(<BarChart data={mockData} xKey="label" yKey="value" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThanOrEqual(3);
+  });
+});

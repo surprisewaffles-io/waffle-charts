@@ -1,6 +1,5 @@
 import { ScatterChart } from '../../components/waffle/ScatterChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import ScatterChartSource from '../../components/waffle/ScatterChart.tsx?raw';
 
 // Generate some random correlation data
@@ -8,6 +7,13 @@ const data = Array.from({ length: 50 }, (_, i) => ({
   id: i,
   x: Math.floor(Math.random() * 100),
   y: Math.floor(Math.random() * 1000),
+}));
+
+// Built once at module scope; generating it inside the component would draw a
+// different cloud on every render.
+const densityData = Array.from({ length: 200 }, () => ({
+  x: Math.random() * 100,
+  y: Math.random() * 100,
 }));
 
 export function ScatterChartPage() {
@@ -36,7 +42,7 @@ export function ScatterChartPage() {
       <div className="p-6 border rounded-lg shadow-sm">
         <h3 className="font-semibold mb-4">Density Test (200 points)</h3>
         <ScatterChart
-          data={Array.from({ length: 200 }, () => ({ x: Math.random() * 100, y: Math.random() * 100 }))}
+          data={densityData}
           xKey="x"
           yKey="y"
           pointClassName="fill-orange-500 opacity-50"

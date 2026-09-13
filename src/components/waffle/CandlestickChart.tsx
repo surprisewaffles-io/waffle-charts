@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Bar, Line } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleTime, scaleLinear } from '@visx/scale';
@@ -42,6 +42,8 @@ export type CandlestickChartProps<T> = {
   xAxisLabel?: string;
   yAxisLabel?: string;
   margin?: { top: number; right: number; bottom: number; left: number };
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type CandlestickChartContentProps<T> = CandlestickChartProps<T> & {
@@ -68,6 +70,7 @@ function CandlestickChartContent<T>({
   xAxisLabel,
   yAxisLabel,
   margin: customMargin,
+  emptyMessage = 'No data to display',
 }: CandlestickChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -75,12 +78,30 @@ function CandlestickChartContent<T>({
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => new Date(d[xKey] as string | number | Date);
-  const getHigh = (d: T) => Number(d[highKey]);
-  const getLow = (d: T) => Number(d[lowKey]);
-  const getOpen = (d: T) => Number(d[openKey]);
-  const getClose = (d: T) => Number(d[closeKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => new Date(d[xKey] as string | number | Date), [xKey]);
+  const getHigh = useCallback((d: T) => Number(d[highKey]), [highKey]);
+  const getLow = useCallback((d: T) => Number(d[lowKey]), [lowKey]);
+  const getOpen = useCallback((d: T) => Number(d[openKey]), [openKey]);
+  const getClose = useCallback((d: T) => Number(d[closeKey]), [closeKey]);
+
+  // A candle needs a real date and a finite high and low to be drawn.
+  const validData = useMemo(
+    () =>
+      safeData.filter(
+        d =>
+          !Number.isNaN(getX(d).getTime()) &&
+          Number.isFinite(getHigh(d)) &&
+          Number.isFinite(getLow(d)),
+      ),
+    [safeData, getX, getHigh, getLow],
+  );
 
   // Scales
   const xScale = useMemo(
@@ -88,26 +109,27 @@ function CandlestickChartContent<T>({
       scaleTime({
         range: [0, xMax],
         domain: [
-          min(data, getX) || new Date(),
-          max(data, getX) || new Date()
+          min(validData, getX) || new Date(),
+          max(validData, getX) || new Date()
         ],
       }),
-    [xMax, data, xKey],
+    [xMax, validData, getX],
   );
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [yMax, 0],
-        round: true,
-        domain: [
-          (min(data, getLow) || 0) * 0.95, // Add some padding
-          (max(data, getHigh) || 0) * 1.05
-        ],
-        nice: true,
-      }),
-    [yMax, data, highKey, lowKey],
-  );
+  const yScale = useMemo(() => {
+    // d3's min/max return undefined for an empty input, so an all-zero domain
+    // would collapse the axis; the fallback gives it a usable span instead.
+    const low = min(validData, getLow);
+    const high = max(validData, getHigh);
+    const domain: [number, number] =
+      low === undefined || high === undefined ? [0, 100] : [low * 0.95, high * 1.05];
+    return scaleLinear<number>({
+      range: [yMax, 0],
+      round: true,
+      domain,
+      nice: true,
+    });
+  }, [yMax, validData, getLow, getHigh]);
 
   // Tooltip
   const {
@@ -125,8 +147,25 @@ function CandlestickChartContent<T>({
 
   if (width < 10 || height < 100) return null;
 
-  // Calculate candle width dynamically based on data density
-  const candleWidth = Math.max(1, (xMax / data.length) * 0.7);
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
+  // Calculate candle width dynamically based on data density. Dividing by an
+  // empty length would make every candle Infinity wide.
+  const candleWidth = Math.max(1, (xMax / validData.length) * 0.7);
 
   return (
     <div className={cn("relative", className)}>
@@ -183,7 +222,7 @@ function CandlestickChartContent<T>({
             />
           )}
 
-          {data.map((d, i) => {
+          {validData.map((d, i) => {
             const x = xScale(getX(d));
             const open = getOpen(d);
             const close = getClose(d);

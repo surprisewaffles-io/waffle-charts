@@ -1,6 +1,5 @@
 import { RadarChart } from '../../components/waffle/RadarChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import RadarChartSource from '../../components/waffle/RadarChart.tsx?raw';
 
 const data = [

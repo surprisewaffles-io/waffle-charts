@@ -29,6 +29,45 @@ export type SankeyChartProps = {
   height?: number;
   className?: string;
   colorScheme?: string[];
+  /** Rendered in place of the chart when `data` holds no drawable graph. */
+  emptyMessage?: string;
+};
+
+/**
+ * The subset of a laid-out d3-sankey link this chart reads. d3-sankey's own
+ * link type describes the graph *before* layout, where `source`/`target` are
+ * still plain indices and the geometry is absent, so the rendered arrays are
+ * read through these shapes instead.
+ */
+type LaidOutLink = {
+  path?: string;
+  width?: number;
+  value: number;
+  source: { name: string };
+  target: { name: string };
+};
+
+/**
+ * Resolves a link endpoint to a node index. A caller supplies an index, but a
+ * graph that d3-sankey has already laid out carries the node object instead.
+ */
+const endpointIndex = (endpoint: unknown): number => {
+  if (typeof endpoint === 'number') return Number.isInteger(endpoint) ? endpoint : -1;
+  if (endpoint && typeof endpoint === 'object') {
+    const index = (endpoint as { index?: unknown }).index;
+    return typeof index === 'number' && Number.isInteger(index) ? index : -1;
+  }
+  return -1;
+};
+
+/** The subset of a laid-out d3-sankey node this chart reads. */
+type LaidOutNode = {
+  name: string;
+  value: number;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
 };
 
 type SankeyChartContentProps = SankeyChartProps & {
@@ -42,19 +81,53 @@ function SankeyChartContent({
   height,
   className,
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'], // Default diverse palette
+  emptyMessage = 'No data to display',
 }: SankeyChartContentProps) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
+  // Every hook below runs unconditionally. The graph is normalised here rather
+  // than guarded with an early return, because an early return placed above
+  // these hooks changes the hook count between renders.
+  //
+  // The copies matter: d3-sankey rewrites each link's `source`/`target` from an
+  // index to the node object in place, so laying out the caller's own array
+  // would corrupt it and make the next render read object endpoints where it
+  // expects indices. endpointIndex accepts either form for that reason, and a
+  // link pointing at a node that does not exist is dropped — d3-sankey throws
+  // on those.
+  const graphData = useMemo<SankeyData>(() => {
+    const sourceNodes = Array.isArray(data?.nodes) ? data.nodes : [];
+    const sourceLinks = Array.isArray(data?.links) ? data.links : [];
+    const nodes = sourceNodes.map(node => ({ ...node }));
+
+    const links = sourceLinks
+      .map(link => ({
+        source: endpointIndex(link?.source),
+        target: endpointIndex(link?.target),
+        value: Number(link?.value),
+      }))
+      .filter(
+        link =>
+          link.source >= 0 &&
+          link.source < nodes.length &&
+          link.target >= 0 &&
+          link.target < nodes.length &&
+          Number.isFinite(link.value),
+      );
+
+    return { nodes, links };
+  }, [data]);
+
   // Color Scale
   const colorScale = useMemo(
     () =>
       scaleOrdinal({
-        domain: data.nodes.map((node) => node.name),
+        domain: graphData.nodes.map((node) => node.name),
         range: colorScheme,
       }),
-    [data, colorScheme]
+    [graphData, colorScheme]
   );
 
   // Tooltip
@@ -82,11 +155,27 @@ function SankeyChartContent({
 
   if (width < 50) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (graphData.nodes.length === 0 || graphData.links.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative font-sans", className)}>
       <svg ref={setRefs} width={width} height={height} className="overflow-visible">
         <Sankey
-          root={data}
+          root={graphData}
           size={[innerWidth, innerHeight]}
           nodeWidth={15}
           nodePadding={10}
@@ -95,7 +184,7 @@ function SankeyChartContent({
           {({ graph }) => (
             <Group>
               {/* Links */}
-              {graph.links.map((link: any, i: number) => (
+              {(graph.links as unknown as LaidOutLink[]).map((link, i) => (
                 <path
                   key={`link-${i}`}
                   d={link.path || ''}
@@ -123,7 +212,7 @@ function SankeyChartContent({
               ))}
 
               {/* Nodes */}
-              {graph.nodes.map((node: any, i: number) => (
+              {(graph.nodes as unknown as LaidOutNode[]).map((node, i) => (
                 <Group key={`node-${i}`} top={node.y0} left={node.x0}>
                   <rect
                     width={Math.max(0, node.x1 - node.x0)}

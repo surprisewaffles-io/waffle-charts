@@ -79,3 +79,69 @@ describe('RadialBarChart', () => {
     }
   });
 });
+
+describe('RadialBarChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<RadialBarChart data={[]} valueKey="value" labelKey="name" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(
+      <RadialBarChart data={[]} valueKey="value" labelKey="name" emptyMessage="No rings" />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No rings');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<RadialBarChart data={asData(value)} valueKey="value" labelKey="name" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has a non-numeric value', () => {
+    render(
+      <RadialBarChart
+        data={asData([{ name: 'A', value: 'lots' }])}
+        valueKey="value"
+        labelKey="name"
+      />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single ring', () => {
+    const { container } = render(
+      <RadialBarChart data={[mockData[0]]} valueKey="value" labelKey="name" />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('produces finite geometry when every value is zero', () => {
+    const { container } = render(
+      <RadialBarChart
+        data={[{ name: 'A', value: 0, fill: 'red' }]}
+        valueKey="value"
+        labelKey="name"
+      />,
+    );
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(
+      <RadialBarChart data={[]} valueKey="value" labelKey="name" />,
+    );
+    rerender(<RadialBarChart data={mockData} valueKey="value" labelKey="name" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path').length).toBeGreaterThanOrEqual(4);
+  });
+});

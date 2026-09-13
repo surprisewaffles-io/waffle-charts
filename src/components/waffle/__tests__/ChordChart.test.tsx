@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { ChordChart } from '../ChordChart';
 
 // Mock ParentSize
 vi.mock('@visx/responsive', () => ({
-  ParentSize: ({ children }: any) => children({ width: 800, height: 600 }),
+  ParentSize: ({ children }: { children: (args: { width: number; height: number }) => ReactNode }) =>
+    children({ width: 800, height: 600 }),
 }));
 
 // Mock TooltipInPortal
@@ -14,8 +16,8 @@ vi.mock('@visx/tooltip', async () => {
   return {
     ...actual,
     useTooltipInPortal: () => ({
-      containerRef: (node: any) => node,
-      TooltipInPortal: ({ children }: any) => <div>{children}</div>,
+      containerRef: () => { },
+      TooltipInPortal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     }),
   };
 });
@@ -71,5 +73,56 @@ describe('ChordChart', () => {
     // Use findBy to wait
     const tooltip = await screen.findByText(/Flow:/);
     expect(tooltip).toBeInTheDocument();
+  });
+});
+
+describe('ChordChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asMatrix = (value: unknown) => value as number[][];
+
+  it('renders a fallback instead of a chart when the matrix is empty', () => {
+    render(<ChordChart data={[]} keys={[]} />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<ChordChart data={[]} keys={[]} emptyMessage="No connections" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No connections');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<ChordChart data={asMatrix(value)} keys={keys} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every cell is zero', () => {
+    render(<ChordChart data={[[0, 0], [0, 0]]} keys={keys} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single-group matrix', () => {
+    const { container } = render(<ChordChart data={[[10]]} keys={['A']} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path').length).toBeGreaterThan(0);
+  });
+
+  it('pads a ragged matrix rather than producing NaN geometry', () => {
+    const { container } = render(
+      <ChordChart data={asMatrix([[100, 50], [50]])} keys={keys} />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.innerHTML).not.toMatch(/NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<ChordChart data={[]} keys={[]} />);
+    rerender(<ChordChart data={matrix} keys={keys} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path').length).toBeGreaterThan(0);
   });
 });

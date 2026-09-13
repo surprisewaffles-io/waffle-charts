@@ -8,7 +8,7 @@ import { ParentSize } from '@visx/responsive';
 import { curveMonotoneX } from '@visx/curve';
 import { localPoint } from '@visx/event';
 import { cn } from '../../lib/utils';
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo } from 'react';
 
 // Types
 export type CompositeChartProps<T> = {
@@ -21,6 +21,8 @@ export type CompositeChartProps<T> = {
   className?: string;
   barColor?: string;
   lineColor?: string;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type CompositeChartContentProps<T> = CompositeChartProps<T> & {
@@ -38,44 +40,60 @@ function CompositeChartContent<T>({
   className,
   barColor = '#3b82f6', // blue-500
   lineColor = '#ef4444', // red-500
+  emptyMessage = 'No data to display',
 }: CompositeChartContentProps<T>) {
   const margin = { top: 40, right: 50, bottom: 50, left: 50 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => d[xKey] as unknown as string;
-  const getBarValue = (d: T) => d[barKey] as unknown as number;
-  const getLineValue = (d: T) => d[lineKey] as unknown as number;
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => d[xKey] as unknown as string, [xKey]);
+  const getBarValue = useCallback((d: T) => Number(d[barKey]), [barKey]);
+  const getLineValue = useCallback((d: T) => Number(d[lineKey]), [lineKey]);
+
+  // A row needs both a bar height and a line height to be drawn.
+  const validData = useMemo(
+    () =>
+      safeData.filter(
+        d => Number.isFinite(getBarValue(d)) && Number.isFinite(getLineValue(d)),
+      ),
+    [safeData, getBarValue, getLineValue],
+  );
 
   // Scales
   const xScale = useMemo(
     () =>
       scaleBand({
         range: [0, innerWidth],
-        domain: data.map(getX),
+        domain: validData.map(getX),
         padding: 0.4,
       }),
-    [innerWidth, data, getX]
+    [innerWidth, validData, getX]
   );
 
-  const y1Scale = useMemo(
-    () =>
-      scaleLinear({
-        range: [innerHeight, 0],
-        domain: [0, Math.max(...data.map(getBarValue)) * 1.1], // 10% headroom
-      }),
-    [innerHeight, data, getBarValue]
-  );
+  // Math.max spread over an empty array yields -Infinity, which is truthy — a
+  // `|| 0` fallback never fires and the domain becomes unusable.
+  const y1Scale = useMemo(() => {
+    const peak = validData.length ? Math.max(...validData.map(getBarValue)) : 0;
+    return scaleLinear({
+      range: [innerHeight, 0],
+      domain: [0, peak > 0 ? peak * 1.1 : 100], // 10% headroom
+    });
+  }, [innerHeight, validData, getBarValue]);
 
-  const y2Scale = useMemo(
-    () =>
-      scaleLinear({
-        range: [innerHeight, 0],
-        domain: [0, Math.max(...data.map(getLineValue)) * 1.1],
-      }),
-    [innerHeight, data, getLineValue]
-  );
+  const y2Scale = useMemo(() => {
+    const peak = validData.length ? Math.max(...validData.map(getLineValue)) : 0;
+    return scaleLinear({
+      range: [innerHeight, 0],
+      domain: [0, peak > 0 ? peak * 1.1 : 100],
+    });
+  }, [innerHeight, validData, getLineValue]);
 
   // Tooltip
   const {
@@ -97,8 +115,8 @@ function CompositeChartContent<T>({
     const bandWidth = xScale.step();
     const index = Math.floor(x0 / bandWidth);
 
-    if (index >= 0 && index < data.length) {
-      const d = data[index];
+    if (index >= 0 && index < validData.length) {
+      const d = validData[index];
       const barVal = getBarValue(d);
       const lineVal = getLineValue(d);
       const xVal = getX(d);
@@ -113,7 +131,23 @@ function CompositeChartContent<T>({
     }
   };
 
+  // Guards sit below every hook so the hook count never varies between renders.
   if (width < 50) return null;
+
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative font-sans", className)}>
@@ -130,7 +164,7 @@ function CompositeChartContent<T>({
           <GridRows scale={y1Scale} width={innerWidth} strokeDasharray="3,3" strokeOpacity={0.2} />
 
           {/* Bars (Primary Axis) */}
-          {data.map((d) => {
+          {validData.map((d) => {
             const xVal = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = innerHeight - (y1Scale(getBarValue(d)) ?? 0);
@@ -152,7 +186,7 @@ function CompositeChartContent<T>({
 
           {/* Line (Secondary Axis) */}
           <LinePath
-            data={data}
+            data={validData}
             x={(d) => (xScale(getX(d)) ?? 0) + xScale.bandwidth() / 2}
             y={(d) => y2Scale(getLineValue(d)) ?? 0}
             stroke={lineColor}
@@ -160,7 +194,7 @@ function CompositeChartContent<T>({
             curve={curveMonotoneX}
           />
           {/* Line Points */}
-          {data.map((d, i) => (
+          {validData.map((d, i) => (
             <circle
               key={i}
               cx={(xScale(getX(d)) ?? 0) + xScale.bandwidth() / 2}

@@ -20,6 +20,8 @@ export type RadialBarChartProps<T> = {
   endAngle?: number;
   innerRadius?: number; // 0 to 1, relative to max radius? or absolute pixels?
   // Let's use relative fraction 0-1 for flexibility or just let d3 handle pixels.
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type RadialBarChartContentProps<T> = RadialBarChartProps<T> & {
@@ -42,6 +44,7 @@ function RadialBarChartContent<T>({
   startAngle = 0,
   endAngle = 360,
   innerRadius: customInnerRadius = 0.2, // 20% of radius empty in middle
+  emptyMessage = 'No data to display',
 }: RadialBarChartContentProps<T>) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -54,28 +57,38 @@ function RadialBarChartContent<T>({
   const getValue = (d: T) => Number(d[valueKey]);
   const getLabel = (d: T) => String(d[labelKey]);
 
-  const calculatedMax = maxValue ?? Math.max(...data.map(getValue));
+  // A ring without a finite value has no arc angle. Rows are normalised here
+  // so the geometry below never divides by zero or spreads an empty array.
+  const safeData = Array.isArray(data) ? data : [];
+  const validData = safeData.filter(d => Number.isFinite(getValue(d)));
+
+  // Math.max spread over an empty array yields -Infinity, which is truthy — a
+  // `|| 0` fallback never fires and the angle domain becomes unusable.
+  const observedMax = validData.length ? Math.max(...validData.map(getValue)) : 0;
+  const calculatedMax = maxValue ?? (observedMax > 0 ? observedMax : 1);
 
   // Angle Scale (Length of bar)
   // Maps value to angle
   const angleScale = scaleLinear({
     range: [degreesToRadians(startAngle), degreesToRadians(endAngle)],
-    domain: [0, calculatedMax],
+    domain: [0, calculatedMax > 0 ? calculatedMax : 1],
   });
 
   // Color Scale
   const defaultColors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'];
   const colorScale = scaleOrdinal({
-    domain: data.map((_, i) => i),
+    domain: validData.map((_, i) => i),
     range: colors || defaultColors,
   });
 
   // Radius calculations
-  // We need to fit `data.length` rings between customInnerRadius*radius and radius.
+  // We need to fit `validData.length` rings between customInnerRadius*radius and radius.
   // Gap between rings?
   const gap = 4;
   const totalRingWidth = radius - (radius * customInnerRadius);
-  const ringWidth = (totalRingWidth - (gap * (data.length - 1))) / data.length;
+  const ringWidth = validData.length
+    ? (totalRingWidth - (gap * (validData.length - 1))) / validData.length
+    : totalRingWidth;
 
   // Tooltip
   const {
@@ -94,6 +107,22 @@ function RadialBarChartContent<T>({
 
   if (width < 50) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative", className)}>
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
@@ -103,7 +132,7 @@ function RadialBarChartContent<T>({
             Let's assume default mapping.
             */}
 
-          {data.map((d, i) => {
+          {validData.map((d, i) => {
             // Outer to Inner? Or Inner to Outer?
             // Usually Outer is the first item?
             const outerR = radius - (i * (ringWidth + gap));

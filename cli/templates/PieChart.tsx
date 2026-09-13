@@ -21,6 +21,8 @@ export type PieChartProps<T> = {
     title: string;
     subtitle?: string;
   };
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type PieChartContentProps<T> = PieChartProps<T> & {
@@ -38,6 +40,7 @@ function PieChartContent<T>({
   innerRadius = 0, // Default to full pie
   colors,
   centerText,
+  emptyMessage = 'No data to display',
 }: PieChartContentProps<T>) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -49,12 +52,17 @@ function PieChartContent<T>({
   // Accessors
   const getValue = (d: T) => Number(d[valueKey]);
 
+  // A slice needs a finite, positive value to occupy any angle. Rows are
+  // normalised here so the arcs below never receive NaN.
+  const safeData = Array.isArray(data) ? data : [];
+  const validData = safeData.filter(d => Number.isFinite(getValue(d)) && getValue(d) > 0);
+
   // Scales (Color)
   // We prefer using CSS classes/variables, but Visx Pie returns arcs.
   // We will map index to a Tailwind color class if provided, or default ordinals.
   const defaultColors = ['text-primary', 'text-blue-500', 'text-indigo-500', 'text-sky-500', 'text-cyan-500']
   const colorScale = scaleOrdinal({
-    domain: data.map((_, i) => i),
+    domain: validData.map((_, i) => i),
     range: colors || defaultColors,
   });
 
@@ -78,12 +86,28 @@ function PieChartContent<T>({
 
   if (width < 10) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative flex items-center justify-center", className)}>
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
         <Group top={centerY + margin.top} left={centerX + margin.left}>
           <Pie
-            data={data}
+            data={validData}
             pieValue={getValue}
             outerRadius={radius}
             innerRadius={innerRadius}
@@ -97,9 +121,7 @@ function PieChartContent<T>({
                 const currentOuterRadius = isHovered ? radius + 5 : radius;
 
                 // Create custom arc generator for hover effect
-                // Create custom arc generator for hover effect
                 const arcGenerator = d3arc().cornerRadius(3);
-                // @ts-ignore - d3 types might still complain about explicit config matching
                 const arcPath = arcGenerator({
                   innerRadius,
                   outerRadius: currentOuterRadius,

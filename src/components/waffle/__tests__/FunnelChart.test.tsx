@@ -69,3 +69,65 @@ describe('FunnelChart', () => {
     }
   });
 });
+
+describe('FunnelChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<FunnelChart data={[]} stepKey="step" valueKey="value" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(
+      <FunnelChart data={[]} stepKey="step" valueKey="value" emptyMessage="No steps recorded" />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No steps recorded');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<FunnelChart data={asData(value)} stepKey="step" valueKey="value" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has a non-numeric value', () => {
+    render(
+      <FunnelChart data={asData([{ step: 'Step 1', value: 'many' }])} stepKey="step" valueKey="value" />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single step', () => {
+    const { container } = render(
+      <FunnelChart data={[mockData[0]]} stepKey="step" valueKey="value" />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('polygon').length).toBe(1);
+  });
+
+  it('produces finite geometry when every step value is zero', () => {
+    const { container } = render(
+      <FunnelChart
+        data={[{ step: 'Step 1', value: 0 }, { step: 'Step 2', value: 0 }]}
+        stepKey="step"
+        valueKey="value"
+      />,
+    );
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(
+      <FunnelChart data={[]} stepKey="step" valueKey="value" />,
+    );
+    rerender(<FunnelChart data={mockData} stepKey="step" valueKey="value" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('polygon').length).toBe(3);
+  });
+});

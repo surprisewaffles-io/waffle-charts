@@ -50,3 +50,62 @@ describe('TreemapChart', () => {
     expect(rects.length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('TreemapChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as TreemapData;
+
+  it('renders a fallback instead of a chart when the root has no children', () => {
+    render(<TreemapChart data={{ name: 'root', children: [] }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<TreemapChart data={{ name: 'root', children: [] }} emptyMessage="Nothing to break down" />);
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing to break down');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<TreemapChart data={asData(value)} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every leaf has zero size', () => {
+    render(
+      <TreemapChart data={{ name: 'root', children: [{ name: 'Empty', size: 0 }] }} />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single leaf', () => {
+    const { container } = render(
+      <TreemapChart data={{ name: 'root', children: [{ name: 'Only', size: 10 }] }} />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('treats a non-numeric size as zero rather than producing NaN geometry', () => {
+    const { container } = render(
+      <TreemapChart
+        data={asData({
+          name: 'root',
+          children: [{ name: 'Good', size: 10 }, { name: 'Bad', size: 'huge' }],
+        })}
+      />,
+    );
+    expect(container.innerHTML).not.toMatch(/NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<TreemapChart data={{ name: 'root', children: [] }} />);
+    rerender(<TreemapChart data={mockData} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThanOrEqual(2);
+  });
+});
