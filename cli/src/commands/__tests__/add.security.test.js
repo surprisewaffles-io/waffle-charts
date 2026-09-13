@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { add } from '../add.js';
 import fs from 'fs-extra';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 // Mock dependencies
 vi.mock('fs-extra');
@@ -34,9 +34,14 @@ describe('add command - path traversal security', () => {
     fs.existsSync.mockReturnValue(true);
     fs.mkdirpSync.mockImplementation(() => {});
     fs.copyFileSync.mockImplementation(() => {});
+    // Identity realpath: no symlinks in this mocked world, so the lexical
+    // rejections below are what is under test. Real symlink resolution is
+    // covered unmocked in add.security.symlink.test.js.
+    fs.lstatSync.mockImplementation(() => ({ isSymbolicLink: () => false }));
+    fs.realpathSync.mockImplementation((p) => p);
 
-    // Mock execSync
-    execSync.mockImplementation(() => {});
+    // Mock execFileSync
+    execFileSync.mockImplementation(() => {});
   });
 
   afterEach(() => {
