@@ -4,8 +4,14 @@ import { scaleLinear, scaleOrdinal } from '@visx/scale';
 import { ParentSize } from '@visx/responsive';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 
-export type RadialBarChartProps<T> = {
+export type RadialBarChartProps<T> = ChartA11yProps & {
   data: T[];
   valueKey: keyof T;
   labelKey: keyof T; // Used for identifying the ring
@@ -45,6 +51,11 @@ function RadialBarChartContent<T>({
   endAngle = 360,
   innerRadius: customInnerRadius = 0.2, // 20% of radius empty in middle
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: RadialBarChartContentProps<T>) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -105,6 +116,27 @@ function RadialBarChartContent<T>({
     detectBounds: true
   });
 
+  // Each ring reads as progress toward the same ceiling, so the announcement
+  // pairs the raw value with that ceiling rather than leaving it implied.
+  const a11y = useChartA11y({
+    chartType: 'Radial bar chart',
+    itemCount: validData.length,
+    itemNoun: 'ring',
+    values: validData.map(getValue),
+    detail: `Each ring is measured against a maximum of ${calculatedMax}.`,
+    describeItem: index => {
+      const d = validData[index];
+      return d ? `${getLabel(d)}: ${getValue(d)} of ${calculatedMax}` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = validData.map(d => [getLabel(d), getValue(d), calculatedMax]);
+
   if (width < 50) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -125,7 +157,19 @@ function RadialBarChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group top={centerY + margin.top} left={centerX + margin.left}>
           {/* Rotate so 0 is at top if desired? D3 arc 0 is at 12 o'clock? No, 0 is at 12 if using @visx/shape defaults? 
             Visx Arc: startAngle 0 is usually 12 o'clock. 
@@ -163,6 +207,7 @@ function RadialBarChartContent<T>({
                   endAngle={barAngle}
                   fill={colorScale(i)}
                   cornerRadius={3}
+                  {...dataPointFocusProps(a11y.focusedIndex === i)}
                   className="transition-all duration-500 hover:opacity-80 cursor-pointer"
                   onMouseEnter={() => {
                     // We need a specific point for tooltip.
@@ -185,7 +230,13 @@ function RadialBarChartContent<T>({
         </Group>
       </svg>
 
-      {/* Center Text (if single value? Or generic legend?) 
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(labelKey), String(valueKey), 'Maximum']}
+        rows={tableRows}
+      />
+
+      {/* Center Text (if single value? Or generic legend?)
             Maybe leave center empty for now unless needed. 
         */}
 

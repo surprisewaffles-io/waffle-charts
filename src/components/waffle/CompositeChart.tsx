@@ -8,10 +8,16 @@ import { ParentSize } from '@visx/responsive';
 import { curveMonotoneX } from '@visx/curve';
 import { localPoint } from '@visx/event';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import React, { useCallback, useMemo } from 'react';
 
 // Types
-export type CompositeChartProps<T> = {
+export type CompositeChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   barKey: keyof T;
@@ -41,6 +47,11 @@ function CompositeChartContent<T>({
   barColor = '#3b82f6', // blue-500
   lineColor = '#ef4444', // red-500
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: CompositeChartContentProps<T>) {
   // Adaptive margins that scale down for small containers
   const baseMargin = { top: 40, right: 50, bottom: 50, left: 50 };
@@ -119,6 +130,34 @@ function CompositeChartContent<T>({
     scroll: true,
   });
 
+  // Two series on two axes: the summary covers the bars, and each announcement
+  // reads both numbers, since the point of the chart is comparing them.
+  const a11yValues = useMemo(() => validData.map(getBarValue), [validData, getBarValue]);
+
+  const a11y = useChartA11y({
+    chartType: 'Combination bar and line chart',
+    itemCount: validData.length,
+    itemNoun: 'category',
+    values: a11yValues,
+    detail: `Bars show ${String(barKey)}; the line shows ${String(lineKey)} on a second axis.`,
+    describeItem: index => {
+      const d = validData[index];
+      return d
+        ? `${getX(d)}. ${String(barKey)}: ${getBarValue(d)}, ${String(lineKey)}: ${getLineValue(d)}`
+        : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => validData.map(d => [getX(d), getBarValue(d), getLineValue(d)]),
+    [validData, getX, getBarValue, getLineValue],
+  );
+
   const handleTooltip = (event: React.MouseEvent | React.TouchEvent) => {
     const { x } = localPoint(event) || { x: 0 };
     const x0 = x - margin.left;
@@ -164,19 +203,26 @@ function CompositeChartContent<T>({
   return (
     <div className={cn("relative font-sans", className)}>
       <svg
+        {...a11y.svgProps}
         ref={containerRef}
         width={width}
         height={height}
-        className="overflow-visible"
+        className={cn('overflow-visible', a11y.svgProps.className)}
         onMouseMove={handleTooltip}
         onMouseLeave={() => hideTooltip()}
         onTouchMove={handleTooltip}
       >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={y1Scale} width={innerWidth} strokeDasharray="3,3" strokeOpacity={0.2} />
 
           {/* Bars (Primary Axis) */}
-          {validData.map((d) => {
+          {validData.map((d, i) => {
             const xVal = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = innerHeight - (y1Scale(getBarValue(d)) ?? 0);
@@ -192,6 +238,7 @@ function CompositeChartContent<T>({
                 fill={barColor}
                 rx={4}
                 opacity={0.8}
+                {...dataPointFocusProps(a11y.focusedIndex === i)}
               />
             );
           })}
@@ -211,10 +258,11 @@ function CompositeChartContent<T>({
               key={i}
               cx={(xScale(getX(d)) ?? 0) + xScale.bandwidth() / 2}
               cy={y2Scale(getLineValue(d)) ?? 0}
-              r={4}
+              r={a11y.focusedIndex === i ? 6 : 4}
               fill={lineColor}
               stroke="white"
               strokeWidth={2}
+              {...dataPointFocusProps(a11y.focusedIndex === i)}
             />
           ))}
 
@@ -257,6 +305,12 @@ function CompositeChartContent<T>({
           />
         </Group>
       </svg>
+
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(xKey), String(barKey), String(lineKey)]}
+        rows={tableRows}
+      />
 
       {/* Tooltip */}
       {tooltipOpen && tooltipData && (

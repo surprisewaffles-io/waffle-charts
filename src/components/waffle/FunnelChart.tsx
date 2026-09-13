@@ -3,8 +3,14 @@ import { ParentSize } from '@visx/responsive';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { cn } from '../../lib/utils'; // Assuming this exists based on other files
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 
-export type FunnelChartProps<T> = {
+export type FunnelChartProps<T> = ChartA11yProps & {
   data: T[];
   stepKey: keyof T;
   valueKey: keyof T;
@@ -30,6 +36,11 @@ function FunnelChartContent<T>({
   className,
   colors,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: FunnelChartContentProps<T>) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -121,6 +132,29 @@ function FunnelChartContent<T>({
     detectBounds: true
   });
 
+  // Drop-off between stages is the point of a funnel, so each announcement
+  // carries the stage's share of the widest stage — the same ratio the
+  // polygon's width already encodes visually.
+  const stageShare = (d: T) => Math.round((getValue(d) / widthDivisor) * 100);
+
+  const a11y = useChartA11y({
+    chartType: 'Funnel chart',
+    itemCount: processData.length,
+    itemNoun: 'stage',
+    values: processData.map(getValue),
+    describeItem: index => {
+      const d = processData[index];
+      return d ? `${getStep(d)}: ${getValue(d)}, ${stageShare(d)} percent of the largest stage` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = processData.map(d => [getStep(d), getValue(d), `${stageShare(d)}%`]);
+
   if (width < 50) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -141,7 +175,19 @@ function FunnelChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           {processData.map((d, i) => {
             return (
@@ -149,6 +195,7 @@ function FunnelChartContent<T>({
                 key={i}
                 points={getPoints(d, i)}
                 fill={colorScale(i)}
+                {...dataPointFocusProps(a11y.focusedIndex === i)}
                 className="opacity-80 hover:opacity-100 transition-opacity cursor-pointer"
                 onMouseEnter={() => {
                   const coords = getPoints(d, i).split(' ');
@@ -189,6 +236,12 @@ function FunnelChartContent<T>({
           })}
         </Group>
       </svg>
+
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(stepKey), String(valueKey), 'Share']}
+        rows={tableRows}
+      />
 
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
