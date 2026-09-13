@@ -7,9 +7,15 @@ import { Grid } from '@visx/grid';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 
 // Types
-export type ScatterChartProps<T> = {
+export type ScatterChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   yKey: keyof T;
@@ -40,6 +46,11 @@ function ScatterChartContent<T>({
   pointColor,
   pointRadius = 6,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: ScatterChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -103,6 +114,29 @@ function ScatterChartContent<T>({
     scroll: true,
   });
 
+  const a11yValues = useMemo(() => validData.map(getY), [validData, getY]);
+
+  const a11y = useChartA11y({
+    chartType: 'Scatter plot',
+    itemCount: validData.length,
+    itemNoun: 'point',
+    values: a11yValues,
+    describeItem: index => {
+      const d = validData[index];
+      return d ? `${String(xKey)} ${getX(d)}, ${String(yKey)} ${getY(d)}` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => validData.map(d => [getX(d), getY(d)]),
+    [validData, getX, getY],
+  );
+
   if (width < 10) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -123,7 +157,19 @@ function ScatterChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           <Grid
             xScale={xScale}
@@ -166,6 +212,7 @@ function ScatterChartContent<T>({
                 cy={cy}
                 r={pointRadius}
                 fill={activeColor}
+                {...dataPointFocusProps(a11y.focusedIndex === i)}
                 className={cn("transition-all duration-300 hover:r-8 hover:opacity-80 cursor-pointer", !activeColor && pointClassName)}
                 onMouseEnter={() => {
                   showTooltip({
@@ -180,6 +227,11 @@ function ScatterChartContent<T>({
           })}
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(xKey), String(yKey)]}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

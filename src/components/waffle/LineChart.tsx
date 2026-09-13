@@ -9,10 +9,12 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import { useChartA11y, type ChartA11yProps } from '../../lib/chart-a11y';
 import { bisector } from 'd3-array';
 
 // Types
-export type LineChartProps<T> = {
+export type LineChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   yKey?: keyof T; // Optional if series is provided
@@ -67,6 +69,11 @@ function LineChartContent<T>({
   yDomain,
   series,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: LineChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -155,6 +162,50 @@ function LineChartContent<T>({
     scroll: true,
   });
 
+  // With several series on one x axis, the keyboard cursor tracks x positions
+  // and each announcement reads every series at that x — the same information
+  // the crosshair tooltip gives a mouse user.
+  const a11yValues = useMemo(
+    () =>
+      validData
+        .flatMap(d => effectiveSeries.map(s => getValue(d, s.key)))
+        .filter(Number.isFinite),
+    [validData, effectiveSeries, getValue],
+  );
+
+  const a11y = useChartA11y({
+    chartType: 'Line chart',
+    itemCount: validData.length,
+    itemNoun: 'point',
+    values: a11yValues,
+    detail:
+      effectiveSeries.length > 1
+        ? `${effectiveSeries.length} series: ${effectiveSeries.map(s => s.label || String(s.key)).join(', ')}.`
+        : undefined,
+    describeItem: index => {
+      const d = validData[index];
+      if (!d) return '';
+      const parts = effectiveSeries
+        .map(s => `${s.label || String(s.key)}: ${getValue(d, s.key)}`)
+        .join(', ');
+      return `${getX(d).toLocaleDateString()}. ${parts}`;
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () =>
+      validData.map(d => [
+        getX(d).toLocaleDateString(),
+        ...effectiveSeries.map(s => getValue(d, s.key)),
+      ]),
+    [validData, effectiveSeries, getX, getValue],
+  );
+
   const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
     const { x } = localPoint(event) || { x: 0 };
     const x0 = xScale.invert(x - margin.left);
@@ -218,7 +269,19 @@ function LineChartContent<T>({
         </div>
       )}
 
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         {/* Defs for gradients */}
         <defs>
           {effectiveSeries.map((s, i) => (
@@ -327,6 +390,35 @@ function LineChartContent<T>({
             onMouseLeave={() => hideTooltip()}
           />
 
+          {/*
+            A line has no per-point shape to outline, so the keyboard cursor is
+            a rule plus a dot on every series at the focused x — the same cue
+            the crosshair tooltip gives a mouse user.
+          */}
+          {a11y.focusedIndex >= 0 && validData[a11y.focusedIndex] && (
+            <g pointerEvents="none" data-chart-focus-marker="true">
+              <line
+                x1={xScale(getX(validData[a11y.focusedIndex]))}
+                x2={xScale(getX(validData[a11y.focusedIndex]))}
+                y1={0}
+                y2={yMax}
+                stroke="var(--waffle-focus-color, #0066cc)"
+                strokeWidth={2}
+              />
+              {effectiveSeries.map(s => (
+                <circle
+                  key={`focus-dot-${String(s.key)}`}
+                  cx={xScale(getX(validData[a11y.focusedIndex])) ?? 0}
+                  cy={yScale(getValue(validData[a11y.focusedIndex], s.key)) ?? 0}
+                  r={5}
+                  fill="var(--waffle-focus-color, #0066cc)"
+                  stroke="white"
+                  strokeWidth={2}
+                />
+              ))}
+            </g>
+          )}
+
           {/* Tooltip Dots (One per series) */}
           {tooltipOpen && tooltipData && effectiveSeries.map((s) => (
             <g key={`dot-${String(s.key)}`}>
@@ -344,6 +436,15 @@ function LineChartContent<T>({
 
         </Group>
       </svg>
+
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[
+          xAxisLabel || String(xKey),
+          ...effectiveSeries.map(s => s.label || String(s.key)),
+        ]}
+        rows={tableRows}
+      />
 
       {tooltipOpen && tooltipData && (
         <TooltipInPortal

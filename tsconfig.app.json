@@ -5,7 +5,12 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["vite/client"],
+    /*
+      "node" is for the test files under src, which run in Node and read
+      project files off disk. Vitest stubs CSS imports (`css: false`), so a
+      test that needs a stylesheet's text has to read it rather than import it.
+    */
+    "types": ["vite/client", "node"],
     "skipLibCheck": true,
 
     /* Bundler mode */

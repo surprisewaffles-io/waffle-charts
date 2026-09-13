@@ -4,6 +4,12 @@ import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils'; // Adjust path if needed
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import React, { useMemo } from 'react';
 
 // Types for your Sankey data
@@ -23,7 +29,7 @@ export type SankeyData = {
   links: SankeyLink[];
 };
 
-export type SankeyChartProps = {
+export type SankeyChartProps = ChartA11yProps & {
   data: SankeyData;
   width?: number;
   height?: number;
@@ -82,6 +88,11 @@ function SankeyChartContent({
   className,
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'], // Default diverse palette
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: SankeyChartContentProps) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -153,6 +164,49 @@ function SankeyChartContent({
     svgRef.current = node;
   };
 
+  // d3-sankey sizes a node by the larger of what flows in and what flows out.
+  // Recomputing it here rather than reading the laid-out graph keeps the
+  // description available before the layout render prop runs.
+  const nodeSummaries = useMemo(
+    () =>
+      graphData.nodes.map((node, index) => {
+        const incoming = graphData.links
+          .filter(link => link.target === index)
+          .reduce((sum, link) => sum + link.value, 0);
+        const outgoing = graphData.links
+          .filter(link => link.source === index)
+          .reduce((sum, link) => sum + link.value, 0);
+        return { name: node.name, value: Math.max(incoming, outgoing), incoming, outgoing };
+      }),
+    [graphData],
+  );
+
+  const a11yValues = useMemo(() => nodeSummaries.map(node => node.value), [nodeSummaries]);
+
+  const a11y = useChartA11y({
+    chartType: 'Sankey diagram',
+    itemCount: nodeSummaries.length,
+    itemNoun: 'node',
+    values: a11yValues,
+    detail: `${graphData.links.length} links connect the nodes.`,
+    describeItem: index => {
+      const node = nodeSummaries[index];
+      return node
+        ? `${node.name}: ${node.value} in total, ${node.incoming} in, ${node.outgoing} out`
+        : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => nodeSummaries.map(node => [node.name, node.value, node.incoming, node.outgoing]),
+    [nodeSummaries],
+  );
+
   if (width < 50) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -173,7 +227,19 @@ function SankeyChartContent({
 
   return (
     <div className={cn("relative font-sans", className)}>
-      <svg ref={setRefs} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={setRefs}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Sankey
           root={graphData}
           size={[innerWidth, innerHeight]}
@@ -222,6 +288,7 @@ function SankeyChartContent({
                     rx={2}
                     className="transition-all duration-200 hover:opacity-100 cursor-pointer stroke-background"
                     strokeWidth={0}
+                    {...dataPointFocusProps(a11y.focusedIndex === i)}
                     onMouseEnter={() => {
                       showTooltip({
                         tooltipData: { name: node.name, value: node.value },
@@ -250,6 +317,11 @@ function SankeyChartContent({
           )}
         </Sankey>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={['Node', 'Total', 'Incoming', 'Outgoing']}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}
