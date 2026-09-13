@@ -4,7 +4,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import ora from 'ora';
 import { fileURLToPath } from 'url';
-import { registry } from '../registry.js';
+import { registry, resolveComponent } from '../registry.js';
 import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -33,13 +33,16 @@ export async function add(component, options) {
     selectedComponents = response.components;
   }
 
-  // 2. Validate selections
-  for (const comp of selectedComponents) {
-    if (!registry[comp]) {
+  // 2. Validate selections. A slug, a component name (BarChart), and a label
+  // (Bar Chart) all resolve, so the spelling the registry advertises works here.
+  selectedComponents = selectedComponents.map((comp) => {
+    const slug = resolveComponent(comp);
+    if (!slug) {
       console.error(chalk.red(`Error: Component "${comp}" not found in registry.`));
       process.exit(1);
     }
-  }
+    return slug;
+  });
 
   // Reject null bytes and other malicious patterns (check before path operations)
   if (options.path.includes('\0')) {
