@@ -7,6 +7,7 @@ Modeled after the philosophy of [shadcn/ui](https://ui.shadcn.com).
 WaffleCharts is not a library you install. It's a collection of primitives you copy into your project. You own the code, the DOM, and the styling.
 
 ## Unreleased
+- **Render skipping**: all 16 charts are wrapped in `React.memo`, so a parent re-render no longer re-runs the chart's layout when its props are unchanged. See [Performance](#performance).
 - **Accessibility (WCAG 2.1 Level AA)**: every chart is now reachable by keyboard and readable by a screen reader. See [Accessibility](#accessibility). Applies to `AreaChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChartLegend`, `ChordChart`, `CompositeChart`, `FunnelChart`, `HeatmapChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
 - **Empty data**: every chart now survives empty, `null`, or `undefined` data, rendering a fallback message instead of breaking. The message is customizable via the `emptyMessage` prop. Covers `AreaChart`, `HeatmapChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChordChart`, `CompositeChart`, `FunnelChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
 - **Hook ordering**: `CompositeChart` ran its size guard above its hooks, so a shrinking container changed the hook count between renders. Every chart's early returns now sit below all hooks.
@@ -46,6 +47,53 @@ npm install @visx/shape @visx/group @visx/scale @visx/responsive @visx/tooltip @
 Then copy the component code from the [documentation](https://surprisewaffles-io.github.io/waffle-charts).
 
 > **Note**: WaffleCharts assumes you have a `cn` class merging utility (standard in shadcn/ui) available at `lib/utils` or similar.
+
+## Performance
+
+Every chart is wrapped in `React.memo`, so a parent re-render does not re-run the
+chart's layout unless its props actually changed:
+
+```tsx
+function Dashboard() {
+  const [tab, setTab] = useState('sales');
+  return (
+    <>
+      <Tabs value={tab} onChange={setTab} />
+      {/* Switching tabs re-renders Dashboard, but not this chart. */}
+      <BarChart data={stableData} xKey="label" yKey="value" />
+    </>
+  );
+}
+```
+
+Props are compared structurally rather than by reference, so the common case of
+an inline array literal still skips the render:
+
+```tsx
+// A new array every render, but the same numbers — no re-render.
+<BarChart data={[{ label: 'A', value: 1 }]} xKey="label" yKey="value" />
+```
+
+### Keeping callbacks stable
+
+Function props — `onClick`, `tickFormat` — are compared by reference, not by
+structure. Two closures with identical source are not interchangeable, because
+each captures its own render's variables; treating them as equal would leave the
+chart calling a closure over stale state. A chart given a fresh inline callback
+therefore re-renders every time:
+
+```tsx
+// Re-renders on every parent render: onClick is a new function each time.
+<BarChart data={data} xKey="label" yKey="value" onClick={d => select(d)} />
+
+// Skips the render: the callback identity is stable.
+const handleClick = useCallback((d: Row) => select(d), [select]);
+<BarChart data={data} xKey="label" yKey="value" onClick={handleClick} />
+```
+
+Anything the comparison cannot inspect structurally — a `Date`, a `Map`, a class
+instance, or data nested more than 8 levels deep — counts as changed. That costs
+a render that might not have been needed, and never shows a stale chart.
 
 ## Accessibility
 

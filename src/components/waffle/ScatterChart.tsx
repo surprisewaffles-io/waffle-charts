@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { memoChart } from './memo';
 import { Group } from '@visx/group';
 import { Circle } from '@visx/shape';
 import { scaleLinear } from '@visx/scale';
@@ -250,7 +251,7 @@ function ScatterChartContent<T>({
   );
 }
 
-export const ScatterChart = <T,>(props: ScatterChartProps<T>) => {
+const ScatterChartRoot = <T,>(props: ScatterChartProps<T>) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -259,3 +260,7 @@ export const ScatterChart = <T,>(props: ScatterChartProps<T>) => {
     </div>
   )
 }
+
+/** Memoised so a parent re-render with unchanged props skips the visx layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const ScatterChart = memoChart(ScatterChartRoot);

@@ -1,5 +1,6 @@
 import { Group } from '@visx/group';
 import { Sankey } from '@visx/sankey';
+import { memoChart } from './memo';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
@@ -338,7 +339,7 @@ function SankeyChartContent({
   );
 }
 
-export const SankeyChart = (props: SankeyChartProps) => {
+const SankeyChartRoot = (props: SankeyChartProps) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -347,3 +348,7 @@ export const SankeyChart = (props: SankeyChartProps) => {
     </div>
   );
 }
+
+/** Memoised so a parent re-render with unchanged props skips the sankey layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const SankeyChart = memoChart(SankeyChartRoot);

@@ -1,4 +1,5 @@
 import { Group } from '@visx/group';
+import { memoChart } from './memo';
 import { Bar, LinePath } from '@visx/shape';
 import { scaleBand, scaleLinear } from '@visx/scale';
 import { AxisLeft, AxisRight, AxisBottom } from '@visx/axis';
@@ -336,7 +337,7 @@ function CompositeChartContent<T>({
   );
 }
 
-export function CompositeChart<T>(props: CompositeChartProps<T>) {
+function CompositeChartRoot<T>(props: CompositeChartProps<T>) {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -345,3 +346,7 @@ export function CompositeChart<T>(props: CompositeChartProps<T>) {
     </div>
   );
 }
+
+/** Memoised so a parent re-render with unchanged props skips the visx layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const CompositeChart = memoChart(CompositeChartRoot);

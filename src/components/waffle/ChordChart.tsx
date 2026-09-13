@@ -1,4 +1,5 @@
 import { Chord, Ribbon } from '@visx/chord';
+import { memoChart } from './memo';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { Arc } from '@visx/shape';
@@ -259,7 +260,7 @@ function ChordChartContent({
   );
 }
 
-export const ChordChart = (props: ChordChartProps) => {
+const ChordChartRoot = (props: ChordChartProps) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -268,3 +269,7 @@ export const ChordChart = (props: ChordChartProps) => {
     </div>
   );
 }
+
+/** Memoised so a parent re-render with unchanged props skips the visx layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const ChordChart = memoChart(ChordChartRoot);

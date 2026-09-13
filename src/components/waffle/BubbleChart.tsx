@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from 'react';
+import { memoChart } from './memo';
 import { Group } from '@visx/group';
 import { Circle } from '@visx/shape';
 import { scaleLinear } from '@visx/scale';
@@ -281,7 +282,7 @@ function BubbleChartContent<T>({
   );
 }
 
-export const BubbleChart = <T,>(props: BubbleChartProps<T>) => {
+const BubbleChartRoot = <T,>(props: BubbleChartProps<T>) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -290,3 +291,7 @@ export const BubbleChart = <T,>(props: BubbleChartProps<T>) => {
     </div>
   )
 }
+
+/** Memoised so a parent re-render with unchanged props skips the visx layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const BubbleChart = memoChart(BubbleChartRoot);
