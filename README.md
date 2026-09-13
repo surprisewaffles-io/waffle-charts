@@ -8,6 +8,7 @@ WaffleCharts is not a library you install. It's a collection of primitives you c
 
 ## Unreleased
 - **Render skipping**: all 16 charts are wrapped in `React.memo`, so a parent re-render no longer re-runs the chart's layout when its props are unchanged. See [Performance](#performance).
+- **Accessibility (WCAG 2.1 Level AA)**: every chart is now reachable by keyboard and readable by a screen reader. See [Accessibility](#accessibility). Applies to `AreaChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChartLegend`, `ChordChart`, `CompositeChart`, `FunnelChart`, `HeatmapChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
 - **Empty data**: every chart now survives empty, `null`, or `undefined` data, rendering a fallback message instead of breaking. The message is customizable via the `emptyMessage` prop. Covers `AreaChart`, `HeatmapChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChordChart`, `CompositeChart`, `FunnelChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
 - **Hook ordering**: `CompositeChart` ran its size guard above its hooks, so a shrinking container changed the hook count between renders. Every chart's early returns now sit below all hooks.
 - **Scale domains**: charts no longer spread an empty array through `Math.min`/`Math.max`, which yielded `Infinity`/`-Infinity` domains, nor divide by a zero row count.
@@ -93,6 +94,69 @@ const handleClick = useCallback((d: Row) => select(d), [select]);
 Anything the comparison cannot inspect structurally — a `Date`, a `Map`, a class
 instance, or data nested more than 8 levels deep — counts as changed. That costs
 a render that might not have been needed, and never shows a stale chart.
+
+## Accessibility
+
+Every chart meets WCAG 2.1 Level AA:
+
+- **Screen readers** — the `<svg>` carries `role="img"`, an `aria-label`, and a `<title>`/`<desc>` pair generated from your data.
+- **Keyboard navigation** — Tab reaches the chart; the arrow keys step through its data points; Home and End jump to the ends; Enter and Space activate the focused point; Escape clears the selection. Arrow traversal wraps.
+- **Focus indicators** — a 2px `:focus-visible` outline on the chart, and an outline on the focused data point.
+- **Text alternatives** — an off-screen data table, one row per data point, reachable through `aria-details`.
+- **Live announcements** — a polite live region reads the focused point as you move through it.
+
+```tsx
+<BarChart
+  data={data}
+  xKey="quarter"
+  yKey="revenue"
+  ariaLabel="Sales by quarter"
+  title="2024 Q1-Q4 Sales"
+  description="Bar chart showing quarterly sales ranging from $2M to $5M"
+/>
+```
+
+### Accessibility props
+
+Every chart accepts these. All are optional.
+
+| Prop | Type | Default |
+| --- | --- | --- |
+| `ariaLabel` | `string` | The generated description |
+| `ariaDescribedby` | `string` | The chart's own `<desc>` |
+| `title` | `string` | The chart type, e.g. `"Bar chart"` |
+| `description` | `string` | `"Bar chart with 6 bars. Range: 100 to 300. Average: 196.7."` |
+| `keyboardNavigable` | `boolean` | `true` |
+
+`ChartLegend` is not an SVG chart. It renders a real list with an accessible name, and takes `ariaLabel` or `ariaLabelledby` instead. It carries no `tabIndex`, because putting non-interactive items in the tab order fails WCAG 2.4.3.
+
+### Focus ring colour
+
+The ring reads `--waffle-focus-color`, falling back to `#0066cc`. WCAG 1.4.11 asks for 3:1 against the background behind it, so set it per theme:
+
+```css
+:root      { --waffle-focus-color: #0066cc; }  /* 5.6:1 on white */
+.dark      { --waffle-focus-color: #64b5ff; }  /* 9.1:1 on near-black */
+```
+
+### Testing charts in your own project
+
+Each chart renders its data twice: once as shapes, once as the off-screen table. A bare `getByText('101')` therefore matches both and throws. Tell Testing Library to skip the generated text:
+
+```ts
+import { configure } from '@testing-library/react';
+
+configure({
+  defaultIgnore:
+    'script, style, [data-chart-a11y-table], [data-chart-a11y-table] *, [data-chart-a11y-text]',
+});
+```
+
+Role queries (`getByRole('table')`, `getByRole('cell')`) still reach the table.
+
+### Verified with
+
+Keyboard traversal, the focus ring, and the generated description were checked in Chromium 153 against `BarChart`, `PieChart`, `LineChart`, `TreemapChart`, and `HeatmapChart`. The ARIA structure follows the [Graphics ARIA](https://www.w3.org/WAI/ARIA/apg/patterns/) guidance for `role="img"`: shapes inside an `img` are hidden from assistive tech, which is why per-point information travels through the live region and the data table rather than through the SVG.
 
 ## Contributing
 Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.

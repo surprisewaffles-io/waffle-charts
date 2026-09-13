@@ -57,6 +57,15 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+
+    /*
+      Colour of the chart focus ring and of the outline on the focused data
+      point. WCAG 1.4.11 wants a focus indicator at 3:1 against what sits
+      behind it, so it is defined per theme rather than once. #0066cc reaches
+      5.4:1 on white. Charts fall back to this same value when the variable is
+      absent, so a consumer only overrides it to match their own palette.
+    */
+    --waffle-focus-color: #0066cc;
   }
 
   .dark {
@@ -87,6 +96,9 @@
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
     --ring: 212.7 26.8% 83.9%;
+
+    /* #0066cc reaches only 1.6:1 on this near-black background. */
+    --waffle-focus-color: #64b5ff;
   }
 }
 

@@ -9,6 +9,12 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { min, max } from 'd3-array';
 
 export type CandlestickData = {
@@ -19,7 +25,7 @@ export type CandlestickData = {
   close: number;
 };
 
-export type CandlestickChartProps<T> = {
+export type CandlestickChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   openKey: keyof T;
@@ -72,6 +78,11 @@ function CandlestickChartContent<T>({
   yAxisLabel,
   margin: customMargin,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: CandlestickChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -146,6 +157,41 @@ function CandlestickChartContent<T>({
     scroll: true,
   });
 
+  // The close is the figure a reader tracks across sessions, so it drives the
+  // range summary; the announcement still reads all four prices plus direction,
+  // because colour alone carries direction on screen.
+  const a11yValues = useMemo(() => validData.map(getClose), [validData, getClose]);
+
+  const a11y = useChartA11y({
+    chartType: 'Candlestick chart',
+    itemCount: validData.length,
+    itemNoun: 'session',
+    values: a11yValues,
+    describeItem: index => {
+      const d = validData[index];
+      if (!d) return '';
+      const direction = getClose(d) > getOpen(d) ? 'up' : 'down';
+      return `${getX(d).toLocaleDateString()}, ${direction}. Open ${getOpen(d)}, high ${getHigh(d)}, low ${getLow(d)}, close ${getClose(d)}`;
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () =>
+      validData.map(d => [
+        getX(d).toLocaleDateString(),
+        getOpen(d),
+        getHigh(d),
+        getLow(d),
+        getClose(d),
+      ]),
+    [validData, getX, getOpen, getHigh, getLow, getClose],
+  );
+
   if (width < 10 || height < 100) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -170,7 +216,19 @@ function CandlestickChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           {(showGridRows || showGridColumns) && (
             <Group>
@@ -251,6 +309,7 @@ function CandlestickChartContent<T>({
                   width={candleWidth}
                   height={Math.max(1, barHeight)} // Ensure at least 1px height
                   fill={color}
+                  {...dataPointFocusProps(a11y.focusedIndex === i)}
                   className="hover:opacity-80 cursor-pointer"
                   onMouseLeave={() => hideTooltip()}
                   onMouseMove={(event) => {
@@ -267,6 +326,11 @@ function CandlestickChartContent<T>({
           })}
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(xKey), 'Open', 'High', 'Low', 'Close']}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

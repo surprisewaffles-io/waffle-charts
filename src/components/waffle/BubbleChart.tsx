@@ -8,9 +8,15 @@ import { Grid } from '@visx/grid';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 
 // Types
-export type BubbleChartProps<T> = {
+export type BubbleChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   yKey: keyof T;
@@ -47,6 +53,11 @@ function BubbleChartContent<T>({
   minRadius = 4,
   maxRadius = 30,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: BubbleChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -120,6 +131,33 @@ function BubbleChartContent<T>({
     scroll: true,
   });
 
+  // The bubble's size, not its position, is the measure a reader most needs
+  // spoken, so the generated summary covers the z values.
+  const a11yValues = useMemo(() => validData.map(getZ), [validData, getZ]);
+
+  const a11y = useChartA11y({
+    chartType: 'Bubble chart',
+    itemCount: validData.length,
+    itemNoun: 'bubble',
+    values: a11yValues,
+    describeItem: index => {
+      const d = validData[index];
+      return d
+        ? `${String(xKey)} ${getX(d)}, ${String(yKey)} ${getY(d)}, ${String(zKey)} ${getZ(d)}`
+        : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => validData.map(d => [getX(d), getY(d), getZ(d)]),
+    [validData, getX, getY, getZ],
+  );
+
   if (width < 10) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -140,7 +178,19 @@ function BubbleChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           <Grid
             xScale={xScale}
@@ -187,6 +237,7 @@ function BubbleChartContent<T>({
                 cy={cy}
                 r={r}
                 fill={fillColor}
+                {...dataPointFocusProps(a11y.focusedIndex === i)}
                 className={cn("transition-all duration-300 hover:opacity-80 cursor-pointer stroke-background stroke-1", !fillColor && pointClassName)}
                 onMouseEnter={() => {
                   showTooltip({
@@ -201,6 +252,11 @@ function BubbleChartContent<T>({
           })}
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(xKey), String(yKey), String(zKey)]}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

@@ -12,6 +12,12 @@ import {
 } from '@visx/hierarchy';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { useMemo } from 'react';
 
 // Types
@@ -31,7 +37,7 @@ const tileMethods = {
   sliceDice: treemapSliceDice,
 };
 
-export type TreemapChartProps = {
+export type TreemapChartProps = ChartA11yProps & {
   data: TreemapData; // Root node
   width?: number;
   height?: number;
@@ -57,6 +63,11 @@ function TreemapChartContent({
   tileMethod = "squarify",
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'],
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: TreemapChartContentProps) {
 
   // Every hook below runs unconditionally. `hierarchy(undefined)` throws, so
@@ -77,6 +88,43 @@ function TreemapChartContent({
   }, [safeData]);
 
   const tile = tileMethods[tileMethod] || treemapSquarify;
+
+  // `descendants()` puts the root first and the root is the only depth-0 node,
+  // so a node's position among the drawn nodes is its descendant index minus
+  // one. That identity is what lets the render loop below map its own index
+  // onto these rows without a second traversal.
+  const a11yNodes = useMemo(() => root.descendants().filter(node => node.depth > 0), [root]);
+
+  const a11yValues = useMemo(() => a11yNodes.map(node => node.value ?? 0), [a11yNodes]);
+
+  const a11y = useChartA11y({
+    chartType: 'Treemap',
+    itemCount: a11yNodes.length,
+    itemNoun: 'node',
+    values: a11yValues,
+    detail: `Total ${root.value ?? 0}.`,
+    describeItem: index => {
+      const node = a11yNodes[index];
+      if (!node) return '';
+      const share = root.value ? Math.round(((node.value ?? 0) / root.value) * 100) : 0;
+      return `${node.data.name}: ${node.value ?? 0}, ${share} percent of the total`;
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () =>
+      a11yNodes.map(node => [
+        node.data.name,
+        node.value ?? 0,
+        node.parent?.data.name ?? root.data.name,
+      ]),
+    [a11yNodes, root],
+  );
 
   if (width < 10) return null;
 
@@ -99,7 +147,18 @@ function TreemapChartContent({
 
   return (
     <div className={cn("relative", className)}>
-      <svg width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <rect width={width} height={height} rx={14} className={background} />
         <Treemap<TreemapData>
           top={0}
@@ -134,6 +193,7 @@ function TreemapChartContent({
                         width={width}
                         height={height}
                         fill={isHex ? color : undefined}
+                        {...dataPointFocusProps(a11y.focusedIndex === i - 1)}
                         className={cn("stroke-background stroke-[2px] transition-all hover:opacity-80",
                           !isHex && color
                         )}
@@ -159,6 +219,7 @@ function TreemapChartContent({
           }}
         </Treemap>
       </svg>
+      <ChartA11yLayer a11y={a11y} columns={['Name', 'Value', 'Parent']} rows={tableRows} />
     </div>
   );
 }

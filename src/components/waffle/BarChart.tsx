@@ -9,9 +9,15 @@ import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
 import { GridRows, GridColumns } from '@visx/grid';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 
 // Types
-export type BarChartProps<T> = {
+export type BarChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   yKey?: keyof T; // Optional if using keys
@@ -83,6 +89,11 @@ function BarChartContent<T>({
   tickFormat,
   onClick,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: BarChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -178,6 +189,58 @@ function BarChartContent<T>({
     scroll: true,
   });
 
+  const isMultiSeries = variant === 'stacked' || variant === 'grouped';
+
+  // One accessible "data point" is one category, not one rectangle: a grouped
+  // chart draws several bars per category but a reader traverses categories.
+  const a11yValues = useMemo(
+    () =>
+      isMultiSeries
+        ? validData.map(d => effectiveKeys.reduce((acc, k) => acc + readKey(d, k), 0))
+        : validData.map(getY),
+    [isMultiSeries, validData, effectiveKeys, getY],
+  );
+
+  const a11y = useChartA11y({
+    chartType: 'Bar chart',
+    itemCount: validData.length,
+    itemNoun: 'bar',
+    values: a11yValues,
+    detail: isMultiSeries ? `${effectiveKeys.length} series.` : undefined,
+    describeItem: index => {
+      const d = validData[index];
+      if (!d) return '';
+      return isMultiSeries
+        ? `${getX(d)}. ${effectiveKeys.map(k => `${k}: ${readKey(d, k)}`).join(', ')}`
+        : `${getX(d)}: ${getY(d)}`;
+    },
+    onActivate: index => {
+      const d = validData[index];
+      if (d) onClick?.(d);
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableColumns = useMemo(
+    () =>
+      isMultiSeries
+        ? [xAxisLabel || 'Category', ...effectiveKeys]
+        : [xAxisLabel || 'Category', yAxisLabel || 'Value'],
+    [isMultiSeries, xAxisLabel, yAxisLabel, effectiveKeys],
+  );
+
+  const tableRows = useMemo(
+    () =>
+      validData.map(d =>
+        isMultiSeries ? [getX(d), ...effectiveKeys.map(k => readKey(d, k))] : [getX(d), getY(d)],
+      ),
+    [validData, isMultiSeries, effectiveKeys, getX, getY],
+  );
+
   if (width < 10 || height < 100) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -213,7 +276,19 @@ function BarChartContent<T>({
         </div>
       )}
 
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           {(showGridRows || showGridColumns) && (
             <Group>
@@ -287,6 +362,7 @@ function BarChartContent<T>({
                       height={bar.height}
                       width={bar.width}
                       fill={bar.color}
+                      {...dataPointFocusProps(a11y.focusedIndex === bar.index)}
                       className="hover:opacity-80 transition-opacity cursor-pointer"
                       onClick={() => onClick?.(bar.bar.data)}
                       onMouseLeave={() => hideTooltip()}
@@ -336,6 +412,7 @@ function BarChartContent<T>({
                         width={bar.width}
                         height={bar.height}
                         fill={bar.color}
+                        {...dataPointFocusProps(a11y.focusedIndex === barGroup.index)}
                         className="hover:opacity-80 transition-opacity cursor-pointer"
                         onClick={() => onClick?.(validData[barGroup.index])}
                         onMouseLeave={() => hideTooltip()}
@@ -361,7 +438,7 @@ function BarChartContent<T>({
           )}
 
           {/* Simple Variant (Default) */}
-          {variant === 'simple' && validData.map((d) => {
+          {variant === 'simple' && validData.map((d, dataIndex) => {
             const letter = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = yMax - (yScale(getY(d)) ?? 0);
@@ -376,6 +453,7 @@ function BarChartContent<T>({
                 width={barWidth}
                 height={barHeight}
                 fill={isHex ? barColor : undefined}
+                {...dataPointFocusProps(a11y.focusedIndex === dataIndex)}
                 className={cn("transition-all duration-300 hover:opacity-80 cursor-pointer", !isHex && barColor)}
                 onClick={() => onClick?.(d)}
                 onMouseLeave={() => hideTooltip()}
@@ -393,6 +471,7 @@ function BarChartContent<T>({
           })}
         </Group>
       </svg>
+      <ChartA11yLayer a11y={a11y} columns={tableColumns} rows={tableRows} />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

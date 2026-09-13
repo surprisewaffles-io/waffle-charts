@@ -4,9 +4,15 @@ import { scaleLinear } from '@visx/scale';
 import { Point } from '@visx/point';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { useCallback, useMemo } from 'react';
 
-export type RadarChartProps<T> = {
+export type RadarChartProps<T> = ChartA11yProps & {
   data: T[];
   radiusKey: keyof T;
   angleKey: keyof T;
@@ -36,6 +42,11 @@ function RadarChartContent<T>({
   polygonColor = "#a855f7",
   color,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: RadarChartContentProps<T>) {
   const margin = { top: 40, right: 40, bottom: 40, left: 40 };
   const xMax = width - margin.left - margin.right;
@@ -95,6 +106,26 @@ function RadarChartContent<T>({
     });
   });
 
+  const a11yValues = useMemo(() => validData.map(getRadius), [validData, getRadius]);
+
+  const a11y = useChartA11y({
+    chartType: 'Radar chart',
+    itemCount: validData.length,
+    itemNoun: 'axis',
+    values: a11yValues,
+    describeItem: index => {
+      const d = validData[index];
+      return d ? `${getAngle(d)}: ${getRadius(d)}` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = validData.map(d => [getAngle(d), getRadius(d)]);
+
   if (width < 10) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -115,7 +146,18 @@ function RadarChartContent<T>({
 
   return (
     <div className={cn("relative flex items-center justify-center", className)}>
-      <svg width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group top={height / 2} left={width / 2}>
           {/* Grid Rings (Polygonal) */}
           {gridPoints.map((levelPoints, i) => (
@@ -186,16 +228,22 @@ function RadarChartContent<T>({
               key={`point-${i}`}
               cx={p.x}
               cy={p.y}
-              r={4}
+              r={a11y.focusedIndex === i ? 6 : 4}
               fill={color ? "white" : undefined}
               stroke={color}
               strokeWidth={color ? 2 : undefined}
               className={cn(!color && "fill-background stroke-primary stroke-2")}
+              {...dataPointFocusProps(a11y.focusedIndex === i)}
             />
           ))}
 
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(angleKey), String(radiusKey)]}
+        rows={tableRows}
+      />
     </div>
   );
 }

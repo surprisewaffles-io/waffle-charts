@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { ChartLegend } from '../ChartLegend';
 
 describe('ChartLegend', () => {
@@ -30,6 +30,44 @@ describe('ChartLegend', () => {
     // "items-center" and "justify-center" used in implementation
     expect(container.firstChild).toHaveClass('items-center');
     expect(container.firstChild).toHaveClass('justify-center');
+  });
+});
+
+describe('ChartLegend accessibility', () => {
+  const payload = [
+    { label: 'Red Team', color: 'red' },
+    { label: 'Blue Team', color: 'blue' },
+  ];
+
+  it('exposes the entries as a named list', () => {
+    render(<ChartLegend payload={payload} />);
+    const list = screen.getByRole('list');
+    expect(list).toHaveAccessibleName('Chart legend');
+    expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+  });
+
+  it('takes a caller-supplied name', () => {
+    render(<ChartLegend payload={payload} ariaLabel="Teams" />);
+    expect(screen.getByRole('list')).toHaveAccessibleName('Teams');
+  });
+
+  it('names the list from a visible heading when one is given', () => {
+    render(
+      <>
+        <h2 id="legend-heading">Teams</h2>
+        <ChartLegend payload={payload} ariaLabelledby="legend-heading" />
+      </>,
+    );
+    const list = screen.getByRole('list');
+    expect(list).toHaveAccessibleName('Teams');
+    expect(list).not.toHaveAttribute('aria-label');
+  });
+
+  it('hides the colour swatch, which carries no information the label lacks', () => {
+    render(<ChartLegend payload={payload} />);
+    const item = within(screen.getByRole('list')).getAllByRole('listitem')[0];
+    expect(item.querySelector('[aria-hidden="true"]')).toBeInTheDocument();
+    expect(item).toHaveTextContent('Red Team');
   });
 });
 

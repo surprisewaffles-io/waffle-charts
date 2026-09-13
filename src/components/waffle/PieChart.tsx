@@ -6,10 +6,16 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { useState } from 'react';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { arc as d3arc } from 'd3-shape'; // Direct import for custom arc generation
 
 // Types
-export type PieChartProps<T> = {
+export type PieChartProps<T> = ChartA11yProps & {
   data: T[];
   valueKey: keyof T;
   labelKey: keyof T; // Used for tooltip or legend
@@ -46,6 +52,11 @@ function PieChartContent<T>({
   margin: customMargin,
   onClick,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: PieChartContentProps<T>) {
   const defaultMargin = { top: 20, right: 20, bottom: 20, left: 20 };
   const margin = { ...defaultMargin, ...customMargin };
@@ -90,6 +101,33 @@ function PieChartContent<T>({
   // Interaction State
   const [activeShape, setActiveShape] = useState<number | null>(null);
 
+  // A slice means little in isolation; its share of the whole is the number a
+  // reader actually wants, so both the summary and each announcement carry it.
+  const pieTotal = validData.reduce((sum, d) => sum + getValue(d), 0);
+  const share = (d: T) => (pieTotal > 0 ? Math.round((getValue(d) / pieTotal) * 100) : 0);
+
+  const a11y = useChartA11y({
+    chartType: innerRadius > 0 ? 'Donut chart' : 'Pie chart',
+    itemCount: validData.length,
+    itemNoun: 'slice',
+    values: validData.map(getValue),
+    describeItem: index => {
+      const d = validData[index];
+      return d ? `${String(d[labelKey])}: ${getValue(d)}, ${share(d)} percent` : '';
+    },
+    onActivate: index => {
+      const d = validData[index];
+      if (d) onClick?.(d);
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = validData.map(d => [String(d[labelKey]), getValue(d), `${share(d)}%`]);
+
   if (width < 10 || height < 100) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -110,7 +148,19 @@ function PieChartContent<T>({
 
   return (
     <div className={cn("relative flex items-center justify-center", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group top={centerY + margin.top} left={centerX + margin.left}>
           <Pie
             data={validData}
@@ -123,7 +173,10 @@ function PieChartContent<T>({
             {(pie) => {
               return pie.arcs.map((arc, index) => {
                 const [centroidX, centroidY] = pie.path.centroid(arc);
-                const isHovered = activeShape === index;
+                const isKeyboardFocused = a11y.focusedIndex === index;
+                // The keyboard cursor lifts the slice exactly as hover does, so
+                // a sighted keyboard user sees the same cue a mouse user gets.
+                const isHovered = activeShape === index || isKeyboardFocused;
                 const currentOuterRadius = isHovered ? radius + 5 : radius;
 
                 // Create custom arc generator for hover effect
@@ -141,6 +194,7 @@ function PieChartContent<T>({
                     <path
                       d={arcPath || ''}
                       fill={String(colorScale(index)).startsWith('#') ? String(colorScale(index)) : undefined}
+                      {...dataPointFocusProps(isKeyboardFocused)}
                       className={cn("fill-current transition-all duration-300 cursor-pointer hover:opacity-80", !String(colorScale(index)).startsWith('#') && colorScale(index))}
                       // If colors are passed as specific colors (not classes), you might use fill={...} instead. 
                       // This implementation supports both hex colors and Tailwind TEXT color classes (e.g. 'text-blue-500'),
@@ -180,6 +234,11 @@ function PieChartContent<T>({
 
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(labelKey), String(valueKey), 'Share']}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

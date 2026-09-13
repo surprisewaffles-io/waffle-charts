@@ -9,9 +9,11 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { localPoint } from '@visx/event';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import { useChartA11y, type ChartA11yProps } from '../../lib/chart-a11y';
 import { bisector } from 'd3-array';
 
-export type AreaChartProps<T> = {
+export type AreaChartProps<T> = ChartA11yProps & {
   data: T[];
   xKey: keyof T;
   keys: (keyof T)[]; // Keys to stack
@@ -53,6 +55,11 @@ function AreaChartContent<T>({
   yAxisLabel,
   margin: customMargin,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: AreaChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -113,6 +120,42 @@ function AreaChartContent<T>({
     scroll: true,
   });
 
+  // A stacked area encodes the total height, so that total is what the summary
+  // reports; the per-series numbers live in the announcement and the table.
+  const stackTotals = useMemo(
+    () => validData.map(d => keys.reduce((acc, k) => acc + (Number(d[k]) || 0), 0)),
+    [validData, keys],
+  );
+
+  const a11y = useChartA11y({
+    chartType: 'Stacked area chart',
+    itemCount: validData.length,
+    itemNoun: 'point',
+    values: stackTotals,
+    detail: `${keys.length} stacked series: ${keys.map(String).join(', ')}.`,
+    describeItem: index => {
+      const d = validData[index];
+      if (!d) return '';
+      const parts = keys.map(k => `${String(k)}: ${Number(d[k]) || 0}`).join(', ');
+      return `${getX(d).toLocaleDateString()}. ${parts}. Total ${stackTotals[index]}`;
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () =>
+      validData.map((d, i) => [
+        getX(d).toLocaleDateString(),
+        ...keys.map(k => Number(d[k]) || 0),
+        stackTotals[i],
+      ]),
+    [validData, keys, getX, stackTotals],
+  );
+
   const bisectDate = bisector<T, Date>(d => getX(d)).left;
 
   const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
@@ -155,7 +198,19 @@ function AreaChartContent<T>({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           {(showGridRows || showGridColumns) && (
             <Group>
@@ -233,6 +288,24 @@ function AreaChartContent<T>({
             }
           </AreaStack>
 
+          {/*
+            A stacked area has no per-point shape to outline, so the keyboard
+            cursor is drawn as a rule at the focused x position — the same cue
+            a crosshair tooltip gives a mouse user.
+          */}
+          {a11y.focusedIndex >= 0 && validData[a11y.focusedIndex] && (
+            <line
+              x1={xScale(getX(validData[a11y.focusedIndex]))}
+              x2={xScale(getX(validData[a11y.focusedIndex]))}
+              y1={0}
+              y2={yMax}
+              stroke="var(--waffle-focus-color, #0066cc)"
+              strokeWidth={2}
+              pointerEvents="none"
+              data-chart-focus-marker="true"
+            />
+          )}
+
           {/* Invisible Overlay for Tooltip */}
           <rect
             x={0}
@@ -247,6 +320,11 @@ function AreaChartContent<T>({
           />
         </Group>
       </svg>
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[xAxisLabel || String(xKey), ...keys.map(String), 'Total']}
+        rows={tableRows}
+      />
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
           top={tooltipTop}

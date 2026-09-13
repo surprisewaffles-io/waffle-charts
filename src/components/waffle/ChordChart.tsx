@@ -5,12 +5,18 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { Arc } from '@visx/shape';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { useMemo, useState, useRef } from 'react';
 import { Group } from '@visx/group';
 import { localPoint } from '@visx/event';
 
 // Types
-export type ChordChartProps = {
+export type ChordChartProps = ChartA11yProps & {
   data: number[][];
   keys: string[];
   width?: number;
@@ -34,6 +40,11 @@ function ChordChartContent({
   className,
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'],
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: ChordChartContentProps) {
   // Calculate radius adaptively based on available space
   const centerSize = Math.min(width, height);
@@ -93,6 +104,40 @@ function ChordChartContent({
     svgRef.current = node;
   };
 
+  // A group's arc length is its total flow, so the row totals of the matrix are
+  // the same quantity the reader sees as arc size. Ribbons are traversed
+  // through the group they leave, which keeps one cursor over the whole chart.
+  const groupTotals = useMemo(() => matrix.map(row => row.reduce((sum, v) => sum + v, 0)), [matrix]);
+
+  const a11y = useChartA11y({
+    chartType: 'Chord diagram',
+    itemCount: groupTotals.length,
+    itemNoun: 'group',
+    values: groupTotals,
+    describeItem: index => {
+      const total = groupTotals[index] ?? 0;
+      const flows = matrix[index]
+        ?.map((value, target) => (value > 0 ? `${keys[target] ?? target}: ${value}` : null))
+        .filter(Boolean)
+        .join(', ');
+      return `${keys[index] ?? index}, total ${total}. Flows to ${flows || 'nothing'}`;
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => groupTotals.map((total, i) => [keys[i] ?? String(i), total]),
+    [groupTotals, keys],
+  );
+
+  // The keyboard cursor dims the rest of the diagram exactly as hover does, so
+  // a sighted keyboard user gets the same isolation a mouse user gets.
+  const highlightedGroup = activeGroup ?? (a11y.focusedIndex >= 0 ? a11y.focusedIndex : null);
+
   if (width < 50) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -113,7 +158,19 @@ function ChordChartContent({
 
   return (
     <div className={cn("relative font-sans", className)}>
-      <svg ref={setRefs} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={setRefs}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group top={height / 2} left={width / 2}>
           <Chord matrix={matrix} padAngle={0.05} sortSubgroups={(a, b) => b - a}>
             {({ chords }) => (
@@ -126,9 +183,10 @@ function ChordChartContent({
                     innerRadius={innerRadius}
                     outerRadius={outerRadius}
                     fill={colorScale(keys[i])}
+                    {...dataPointFocusProps(a11y.focusedIndex === i)}
                     className="transition-opacity duration-200 cursor-pointer"
                     opacity={
-                      (activeGroup !== null && activeGroup !== i) ||
+                      (highlightedGroup !== null && highlightedGroup !== i) ||
                         (activeRibbon !== null &&
                           chords[activeRibbon].source.index !== i &&
                           chords[activeRibbon].target.index !== i)
@@ -149,9 +207,9 @@ function ChordChartContent({
                     fillOpacity={0.75}
                     className="transition-all duration-200 hover:fill-opacity-100"
                     opacity={
-                      (activeGroup !== null &&
-                        activeGroup !== chord.source.index &&
-                        activeGroup !== chord.target.index) ||
+                      (highlightedGroup !== null &&
+                        highlightedGroup !== chord.source.index &&
+                        highlightedGroup !== chord.target.index) ||
                         (activeRibbon !== null && activeRibbon !== i)
                         ? 0.1
                         : 0.75
@@ -182,6 +240,8 @@ function ChordChartContent({
           </Chord>
         </Group>
       </svg>
+
+      <ChartA11yLayer a11y={a11y} columns={['Group', 'Total flow']} rows={tableRows} />
 
       {/* Tooltip */}
       {tooltipOpen && tooltipData && (

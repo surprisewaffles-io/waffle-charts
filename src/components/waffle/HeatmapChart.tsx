@@ -5,6 +5,12 @@ import { HeatmapRect } from '@visx/heatmap';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { useMemo } from 'react';
 
 // Types
@@ -16,7 +22,7 @@ export type HeatmapData = {
   }[];
 };
 
-export type HeatmapChartProps = {
+export type HeatmapChartProps = ChartA11yProps & {
   data: HeatmapData[];
   width?: number;
   height?: number;
@@ -40,6 +46,11 @@ function HeatmapChartContent({
   colorRange = ['#e2e8f0', '#0f172a'], // Default slate-200 to slate-900 (using hex for interpolation usually better, but Visx scale accepts colors)
   gap = 2,
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: HeatmapChartContentProps) {
   const margin = { top: 10, right: 10, bottom: 20, left: 20 };
   const xMax = width - margin.left - margin.right;
@@ -99,6 +110,57 @@ function HeatmapChartContent({
     scroll: true,
   });
 
+  // Colour is the only channel a heatmap uses, which is exactly what a reader
+  // cannot perceive. Flattening the grid in column-then-bin order gives the
+  // keyboard a single path over every cell and the table one row per cell.
+  const flatCells = useMemo(
+    () =>
+      columns.flatMap((column, columnIndex) =>
+        column.bins.map(bin => ({
+          columnIndex,
+          columnBin: column.bin,
+          rowBin: bin.bin,
+          count: Number.isFinite(Number(bin.count)) ? Number(bin.count) : 0,
+        })),
+      ),
+    [columns],
+  );
+
+  // Where each column starts in `flatCells`. Columns may hold different
+  // numbers of bins, so a single multiply would land on the wrong cell.
+  const columnOffsets = useMemo(
+    () =>
+      columns.reduce<number[]>((offsets, _column, i) => {
+        offsets.push(i === 0 ? 0 : offsets[i - 1] + columns[i - 1].bins.length);
+        return offsets;
+      }, []),
+    [columns],
+  );
+
+  const a11yValues = useMemo(() => flatCells.map(cell => cell.count), [flatCells]);
+
+  const a11y = useChartA11y({
+    chartType: 'Heatmap',
+    itemCount: flatCells.length,
+    itemNoun: 'cell',
+    values: a11yValues,
+    detail: `${columns.length} columns by ${columns[0]?.bins.length ?? 0} rows.`,
+    describeItem: index => {
+      const cell = flatCells[index];
+      return cell ? `Column ${cell.columnBin}, row ${cell.rowBin}: ${cell.count}` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = useMemo(
+    () => flatCells.map(cell => [String(cell.columnBin), cell.rowBin, cell.count]),
+    [flatCells],
+  );
+
   if (width < 10) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -119,7 +181,19 @@ function HeatmapChartContent({
 
   return (
     <div className={cn("relative", className)}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-visible">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-visible', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           <HeatmapRect<HeatmapData, { bin: number; count: number }>
             data={columns}
@@ -142,6 +216,9 @@ function HeatmapChartContent({
                     y={bin.y}
                     fill={bin.color}
                     rx={2}
+                    {...dataPointFocusProps(
+                      a11y.focusedIndex === (columnOffsets[bin.column] ?? 0) + bin.row,
+                    )}
                     onMouseEnter={() => {
                       showTooltip({
                         tooltipData: bin.count ?? 0, // Ensure strictly number
@@ -157,6 +234,7 @@ function HeatmapChartContent({
           </HeatmapRect>
         </Group>
       </svg>
+      <ChartA11yLayer a11y={a11y} columns={['Column', 'Row', 'Value']} rows={tableRows} />
       {tooltipOpen && tooltipData !== undefined && (
         <TooltipInPortal
           top={tooltipTop}

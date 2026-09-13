@@ -4,9 +4,15 @@ import { ParentSize } from '@visx/responsive';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { cn } from '../../lib/utils';
+import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
+import {
+  dataPointFocusProps,
+  useChartA11y,
+  type ChartA11yProps,
+} from '../../lib/chart-a11y';
 import { useCallback, useMemo } from 'react';
 
-export type WaffleChartProps<T> = {
+export type WaffleChartProps<T> = ChartA11yProps & {
   data: T[];
   labelKey: keyof T;
   valueKey: keyof T;
@@ -50,6 +56,11 @@ function WaffleChartContent<T>({
   colors,
   testId = 'waffle-chart',
   emptyMessage = 'No data to display',
+  ariaLabel,
+  ariaDescribedby,
+  title,
+  description,
+  keyboardNavigable,
 }: WaffleChartContentProps<T>) {
   const margin = { top: 0, right: 0, bottom: 0, left: 0 };
   const innerWidth = width - margin.left - margin.right;
@@ -156,6 +167,29 @@ function WaffleChartContent<T>({
     detectBounds: true
   });
 
+  // A reader traverses categories, not the hundred cells that encode them: the
+  // grid is a rendering of proportion, and proportion is what gets spoken.
+  const categoryShare = (d: T) => Math.round((getValue(d) / effectiveTotal) * 100);
+
+  const a11y = useChartA11y({
+    chartType: 'Waffle chart',
+    itemCount: validData.length,
+    itemNoun: 'category',
+    values: validData.map(getValue),
+    detail: `${totalCells} cells represent a total of ${effectiveTotal}.`,
+    describeItem: index => {
+      const d = validData[index];
+      return d ? `${getLabel(d)}: ${getValue(d)}, ${categoryShare(d)} percent` : '';
+    },
+    ariaLabel,
+    ariaDescribedby,
+    title,
+    description,
+    keyboardNavigable,
+  });
+
+  const tableRows = validData.map(d => [getLabel(d), getValue(d), `${categoryShare(d)}%`]);
+
   if (width < 10) return null;
 
   // Guards sit below every hook so the hook count never varies between renders.
@@ -177,7 +211,19 @@ function WaffleChartContent<T>({
 
   return (
     <div className={cn("relative", className)} data-testid={testId}>
-      <svg ref={containerRef} width={width} height={height} className="overflow-hidden rounded-md">
+      <svg
+        {...a11y.svgProps}
+        ref={containerRef}
+        width={width}
+        height={height}
+        className={cn('overflow-hidden rounded-md', a11y.svgProps.className)}
+      >
+        <ChartSvgDescription
+          titleId={a11y.titleId}
+          descId={a11y.descId}
+          title={a11y.resolvedTitle}
+          description={a11y.resolvedDescription}
+        />
         <Group left={margin.left} top={margin.top}>
           {cells.map((cell) => {
             const x = cell.c * (cellWidth + gap);
@@ -196,6 +242,9 @@ function WaffleChartContent<T>({
                   ? colorScale(cell.index)
                   : 'hsl(var(--muted))'
                 }
+                {...dataPointFocusProps(
+                  cell.type === 'data' && cell.index === a11y.focusedIndex,
+                )}
                 className={cn(
                   "transition-all duration-200",
                   cell.type === 'data' ? "hover:opacity-80 cursor-pointer" : "opacity-20"
@@ -215,6 +264,12 @@ function WaffleChartContent<T>({
           })}
         </Group>
       </svg>
+
+      <ChartA11yLayer
+        a11y={a11y}
+        columns={[String(labelKey), String(valueKey), 'Share']}
+        rows={tableRows}
+      />
 
       {tooltipOpen && tooltipData && (
         <TooltipInPortal
