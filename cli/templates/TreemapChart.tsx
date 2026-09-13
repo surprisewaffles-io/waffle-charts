@@ -37,6 +37,8 @@ export type TreemapChartProps = {
   className?: string;
   tileMethod?: keyof typeof tileMethods;
   background?: string;
+  /** Rendered in place of the chart when `data` holds no sized nodes. */
+  emptyMessage?: string;
 };
 
 type TreemapChartContentProps = TreemapChartProps & {
@@ -50,21 +52,47 @@ function TreemapChartContent({
   height,
   className,
   background = "fill-background",
-  tileMethod = "squarify"
+  tileMethod = "squarify",
+  emptyMessage = 'No data to display',
 }: TreemapChartContentProps) {
+
+  // Every hook below runs unconditionally. `hierarchy(undefined)` throws, so
+  // the root is normalised here rather than with an early return above the
+  // hooks, which would change the hook count between renders.
+  const safeData = useMemo<TreemapData>(
+    () => (data && typeof data === 'object' ? data : { name: '', children: [] }),
+    [data],
+  );
 
   const root = useMemo(() => {
     // If data is already a hierarchy tree
-    const rootHierarchy = hierarchy(data)
+    const rootHierarchy = hierarchy(safeData)
       .sort((a, b) => (b.value || 0) - (a.value || 0));
 
     // Sum values for layout
-    return rootHierarchy.sum((d) => d.size ?? 0);
-  }, [data]);
+    return rootHierarchy.sum((d) => (Number.isFinite(Number(d.size)) ? Number(d.size) : 0));
+  }, [safeData]);
 
   const tile = tileMethods[tileMethod] || treemapSquarify;
 
   if (width < 10) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  // A root that sums to nothing has no rectangles to lay out.
+  if (!root.value) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)}>

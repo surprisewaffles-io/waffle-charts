@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { RadarChart } from '../RadarChart';
 
@@ -74,5 +74,67 @@ describe('RadarChart', () => {
     // Or simpler: check if any polygon has the class.
     const hasGreen = Array.from(polygons).some(p => p.classList.contains('fill-green-500'));
     expect(hasGreen).toBe(true);
+  });
+});
+
+describe('RadarChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<RadarChart data={[]} radiusKey="score" angleKey="subject" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(
+      <RadarChart data={[]} radiusKey="score" angleKey="subject" emptyMessage="No scores yet" />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('No scores yet');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<RadarChart data={asData(value)} radiusKey="score" angleKey="subject" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has a non-numeric radius', () => {
+    render(
+      <RadarChart
+        data={asData([{ subject: 'Math', score: 'high' }])}
+        radiusKey="score"
+        angleKey="subject"
+      />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single spoke', () => {
+    const { container } = render(
+      <RadarChart data={[mockData[0]]} radiusKey="score" angleKey="subject" />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('polygon').length).toBeGreaterThan(0);
+  });
+
+  it('produces finite geometry rather than Infinity for a single spoke', () => {
+    const { container } = render(
+      <RadarChart data={[mockData[0]]} radiusKey="score" angleKey="subject" />,
+    );
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(
+      <RadarChart data={[]} radiusKey="score" angleKey="subject" />,
+    );
+    rerender(<RadarChart data={mockData} radiusKey="score" angleKey="subject" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('circle').length).toBe(3);
   });
 });

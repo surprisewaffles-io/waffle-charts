@@ -1,7 +1,6 @@
 import { WaffleChart } from '../../components/waffle/WaffleChart';
 import { ChartLegend } from '../../components/waffle/ChartLegend';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import WaffleChartSource from '../../components/waffle/WaffleChart.tsx?raw';
 
 const data = [

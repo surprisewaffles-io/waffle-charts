@@ -1,6 +1,5 @@
 import { PieChart } from '../../components/waffle/PieChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import PieChartSource from '../../components/waffle/PieChart.tsx?raw';
 
 const data = [

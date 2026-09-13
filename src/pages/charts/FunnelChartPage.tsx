@@ -1,6 +1,5 @@
 import { FunnelChart } from '../../components/waffle/FunnelChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import FunnelChartSource from '../../components/waffle/FunnelChart.tsx?raw';
 
 const data = [

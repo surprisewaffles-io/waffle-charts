@@ -1,6 +1,5 @@
 import { LineChart } from '../../components/waffle/LineChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import LineChartSource from '../../components/waffle/LineChart.tsx?raw';
 
 const data = [

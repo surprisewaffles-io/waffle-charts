@@ -16,6 +16,8 @@ export type ChordChartProps = {
   height?: number;
   className?: string;
   colorScheme?: string[];
+  /** Rendered in place of the chart when `data` holds no usable matrix. */
+  emptyMessage?: string;
 };
 
 type ChordChartContentProps = ChordChartProps & {
@@ -30,6 +32,7 @@ function ChordChartContent({
   height,
   className,
   colorScheme = ['#a855f7', '#ec4899', '#3b82f6', '#14b8a6', '#f59e0b', '#ef4444'],
+  emptyMessage = 'No data to display',
 }: ChordChartContentProps) {
   // Calculate radius adaptively based on available space
   const centerSize = Math.min(width, height);
@@ -39,6 +42,24 @@ function ChordChartContent({
 
   const [activeGroup, setActiveGroup] = useState<number | null>(null);
   const [activeRibbon, setActiveRibbon] = useState<number | null>(null);
+
+  // Every hook below runs unconditionally. d3's chord layout indexes the
+  // matrix as a square, so a ragged or non-numeric one is padded here rather
+  // than guarded with an early return above the hooks, which would change the
+  // hook count between renders.
+  const matrix = useMemo(() => {
+    const rows = Array.isArray(data) ? data.filter(Array.isArray) : [];
+    const size = rows.length;
+    return rows.map(row =>
+      Array.from({ length: size }, (_, i) => (Number.isFinite(Number(row[i])) ? Number(row[i]) : 0)),
+    );
+  }, [data]);
+
+  // A matrix whose every cell is zero produces zero-width arcs.
+  const hasFlow = useMemo(
+    () => matrix.some(row => row.some(value => value > 0)),
+    [matrix],
+  );
 
   const colorScale = useMemo(
     () =>
@@ -73,11 +94,27 @@ function ChordChartContent({
 
   if (width < 50) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (!hasFlow) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative font-sans", className)}>
       <svg ref={setRefs} width={width} height={height} className="overflow-visible">
         <Group top={height / 2} left={width / 2}>
-          <Chord matrix={data} padAngle={0.05} sortSubgroups={(a, b) => b - a}>
+          <Chord matrix={matrix} padAngle={0.05} sortSubgroups={(a, b) => b - a}>
             {({ chords }) => (
               <g>
                 {/* Ribbons */}

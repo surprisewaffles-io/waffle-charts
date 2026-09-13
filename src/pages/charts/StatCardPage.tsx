@@ -1,6 +1,5 @@
 import { StatCard } from '../../components/waffle/StatCard';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import StatCardSource from '../../components/waffle/StatCard.tsx?raw';
 
 export function StatCardPage() {

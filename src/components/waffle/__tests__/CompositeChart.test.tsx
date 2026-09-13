@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { CompositeChart } from '../CompositeChart';
 
 // Mock ParentSize
 vi.mock('@visx/responsive', () => ({
-  ParentSize: ({ children }: any) => children({ width: 800, height: 600 }),
+  ParentSize: ({ children }: { children: (args: { width: number; height: number }) => ReactNode }) =>
+    children({ width: 800, height: 600 }),
 }));
 
 // Mock TooltipInPortal
@@ -14,8 +16,8 @@ vi.mock('@visx/tooltip', async () => {
   return {
     ...actual,
     useTooltipInPortal: () => ({
-      containerRef: (node: any) => node,
-      TooltipInPortal: ({ children }: any) => <div>{children}</div>,
+      containerRef: () => { },
+      TooltipInPortal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     }),
   };
 });
@@ -94,5 +96,61 @@ describe('CompositeChart', () => {
     // Checking for ANY tooltip content first
     const tooltipContent = await screen.findByText(/Bar:/i);
     expect(tooltipContent).toBeInTheDocument();
+  });
+});
+
+describe('CompositeChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof sampleData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<CompositeChart data={[]} xKey="m" barKey="v" lineKey="l" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(
+      <CompositeChart data={[]} xKey="m" barKey="v" lineKey="l" emptyMessage="Nothing combined" />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent('Nothing combined');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<CompositeChart data={asData(value)} xKey="m" barKey="v" lineKey="l" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row is missing its line value', () => {
+    render(<CompositeChart data={asData([{ m: 'Jan', v: 100 }])} xKey="m" barKey="v" lineKey="l" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single data point', () => {
+    const { container } = render(
+      <CompositeChart data={[sampleData[0]]} xKey="m" barKey="v" lineKey="l" />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('produces finite geometry rather than Infinity for a single point', () => {
+    const { container } = render(
+      <CompositeChart data={[sampleData[0]]} xKey="m" barKey="v" lineKey="l" />,
+    );
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(
+      <CompositeChart data={[]} xKey="m" barKey="v" lineKey="l" />,
+    );
+    rerender(<CompositeChart data={sampleData} xKey="m" barKey="v" lineKey="l" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('circle').length).toBeGreaterThanOrEqual(2);
   });
 });

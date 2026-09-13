@@ -12,6 +12,8 @@ export type FunnelChartProps<T> = {
   height?: number;
   className?: string;
   colors?: string[];
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type FunnelChartContentProps<T> = FunnelChartProps<T> & {
@@ -27,6 +29,7 @@ function FunnelChartContent<T>({
   valueKey,
   className,
   colors,
+  emptyMessage = 'No data to display',
 }: FunnelChartContentProps<T>) {
   const margin = { top: 20, right: 20, bottom: 20, left: 20 };
   const innerWidth = width - margin.left - margin.right;
@@ -36,25 +39,30 @@ function FunnelChartContent<T>({
   const getStep = (d: T) => String(d[stepKey]);
   const getValue = (d: T) => Number(d[valueKey]);
 
+  // A step without a finite value has no width; rows are normalised here so
+  // the geometry below never divides by zero or spreads an empty array.
+  const safeData = Array.isArray(data) ? data : [];
+  const processData = safeData.filter(d => Number.isFinite(getValue(d)));
+
   // Scales
   const defaultColors = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
   const colorScale = scaleOrdinal({
-    domain: data.map((_, i) => i),
+    domain: processData.map((_, i) => i),
     range: colors || defaultColors,
   });
 
-  // Calculate geometry
-  // Calculate geometry
-  const maxValue = Math.max(...data.map(getValue));
-  const processData = data;
+  // Calculate geometry. Math.max spread over an empty array yields -Infinity,
+  // and an all-zero funnel would divide by zero, so the divisor is floored at 1.
+  const maxValue = processData.length ? Math.max(...processData.map(getValue)) : 0;
+  const widthDivisor = maxValue > 0 ? maxValue : 1;
 
-  const stepHeight = innerHeight / processData.length;
+  const stepHeight = processData.length ? innerHeight / processData.length : innerHeight;
 
   const getPoints = (d: T, i: number) => {
     const val = getValue(d);
     // Center the bar/trapezoid
     // Current width proportional to value
-    const w = (val / maxValue) * innerWidth;
+    const w = (val / widthDivisor) * innerWidth;
     const y = i * stepHeight;
 
     // Next width (for trapezoid effect)
@@ -81,7 +89,7 @@ function FunnelChartContent<T>({
     // For the last item, bottom = proportional to its own value (rect) or 0 (point).
     // Let's assume the last item maintains width to show "conversion".
 
-    const nextW = nextD ? (getValue(nextD) / maxValue) * innerWidth : w; // Rectangular ending or taper? let's keep rect for last step visibility.
+    const nextW = nextD ? (getValue(nextD) / widthDivisor) * innerWidth : w; // Rectangular ending or taper? let's keep rect for last step visibility.
 
     const topX = (innerWidth - w) / 2;
     const topY = y;
@@ -115,6 +123,22 @@ function FunnelChartContent<T>({
 
   if (width < 50) return null;
 
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (processData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
+
   return (
     <div className={cn("relative", className)}>
       <svg ref={containerRef} width={width} height={height} className="overflow-visible">
@@ -133,7 +157,7 @@ function FunnelChartContent<T>({
                   const topL = coords[0].split(',');
                   showTooltip({
                     tooltipData: d,
-                    tooltipLeft: Number(topL[0]) + margin.left + ((getValue(d) / maxValue) * innerWidth) / 2,
+                    tooltipLeft: Number(topL[0]) + margin.left + ((getValue(d) / widthDivisor) * innerWidth) / 2,
                     tooltipTop: Number(topL[1]) + margin.top + stepHeight / 2
                   })
                 }}

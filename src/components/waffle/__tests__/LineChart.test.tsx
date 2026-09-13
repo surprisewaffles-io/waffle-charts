@@ -112,7 +112,9 @@ describe('LineChart', () => {
         xKey="date"
         series={[
           { key: 'value', color: 'red' },
-          { key: 'value2' as any, color: 'blue' }
+          // A key absent from the rows — the chart must still render the
+          // series rather than produce a NaN domain.
+          { key: 'value2' as unknown as keyof (typeof mockData)[number], color: 'blue' }
         ]}
       />
     );
@@ -126,5 +128,53 @@ describe('LineChart', () => {
     // Let's find the legend container first if possible, or search by class
     const legendItems = container.querySelectorAll('.rounded-full');
     expect(legendItems.length).toBe(2);
+  });
+});
+
+describe('LineChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<LineChart data={[]} xKey="date" yKey="value" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<LineChart data={[]} xKey="date" yKey="value" emptyMessage="No trend yet" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No trend yet');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<LineChart data={asData(value)} xKey="date" yKey="value" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has an unparseable date', () => {
+    render(<LineChart data={[{ date: 'not-a-date', value: 1 }]} xKey="date" yKey="value" />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single data point', () => {
+    const { container } = render(<LineChart data={[mockData[0]]} xKey="date" yKey="value" />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelector('path')).toBeInTheDocument();
+  });
+
+  it('produces finite geometry rather than Infinity for a single point', () => {
+    const { container } = render(<LineChart data={[mockData[0]]} xKey="date" yKey="value" />);
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<LineChart data={[]} xKey="date" yKey="value" />);
+    rerender(<LineChart data={mockData} xKey="date" yKey="value" />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelector('path')).toBeInTheDocument();
   });
 });

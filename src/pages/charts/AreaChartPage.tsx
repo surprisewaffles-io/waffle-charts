@@ -1,6 +1,5 @@
 import { AreaChart } from '../../components/waffle/AreaChart';
 import { ComponentPreview } from '../../components/ComponentPreview';
-// @ts-ignore
 import AreaChartSource from '../../components/waffle/AreaChart.tsx?raw';
 
 const data = [

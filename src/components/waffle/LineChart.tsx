@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { AreaClosed, LinePath, Bar } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
 import { Group } from '@visx/group';
@@ -39,6 +39,8 @@ export type LineChartProps<T> = {
   yAxisLabel?: string;
   margin?: { top: number; right: number; bottom: number; left: number };
   yDomain?: [number, number];
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type LineChartContentProps<T> = LineChartProps<T> & {
@@ -63,7 +65,8 @@ function LineChartContent<T>({
   yAxisLabel,
   margin: customMargin,
   yDomain,
-  series
+  series,
+  emptyMessage = 'No data to display',
 }: LineChartContentProps<T>) {
   // Config
   const defaultMargin = { top: 40, right: 30, bottom: 50, left: 50 };
@@ -72,46 +75,70 @@ function LineChartContent<T>({
   const yMax = height - margin.top - margin.bottom;
 
 
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
   // Backward compatibility: Convert legacy single-series props to series array
   // If 'series' is provided, use it. Otherwise use 'yKey'.
-  const effectiveSeries = series || (yKey ? [{
-    key: yKey,
-    color: lineColor || "#a855f7",
-    label: yAxisLabel || String(yKey),
-    areaColor: areaColor // Only single series supported area before
-  }] : []);
+  // Memoised because the yScale memo below depends on it — a fresh array each
+  // render would invalidate that cache on every pass.
+  const effectiveSeries = useMemo(
+    () =>
+      series ||
+      (yKey
+        ? [{
+          key: yKey,
+          color: lineColor || "#a855f7",
+          label: yAxisLabel || String(yKey),
+          areaColor: areaColor, // Only single series supported area before
+        }]
+        : []),
+    [series, yKey, lineColor, yAxisLabel, areaColor],
+  );
 
-  // Accessors
-  const getX = (d: T) => new Date(d[xKey] as string | number | Date);
+  // Accessors are memoised so the scale memos below actually cache.
+  const getX = useCallback((d: T) => new Date(d[xKey] as string | number | Date), [xKey]);
   // Helper to get value for a specific key
-  const getValue = (d: T, key: keyof T) => Number(d[key]);
+  const getValue = useCallback((d: T, key: keyof T) => Number(d[key]), []);
+
+  // Rows whose xKey does not parse to a real date cannot be positioned.
+  const validData = useMemo(
+    () => safeData.filter(d => !Number.isNaN(getX(d).getTime())),
+    [safeData, getX],
+  );
 
   // Bisector for tooltip
-  const bisectDate = bisector<T, Date>(d => getX(d)).left;
+  const bisectDate = useMemo(() => bisector<T, Date>(d => getX(d)).left, [getX]);
 
   // Scales
-  const xScale = useMemo(
-    () =>
-      scaleTime({
-        range: [0, xMax],
-        domain: [Math.min(...data.map(d => getX(d).getTime())), Math.max(...data.map(d => getX(d).getTime()))],
-      }),
-    [xMax, data, xKey],
-  );
+  const xScale = useMemo(() => {
+    const times = validData.map(d => getX(d).getTime());
+    // Math.min/max spread over an empty array yield Infinity/-Infinity, which
+    // are truthy — a `|| 0` fallback never fires and the domain is inverted.
+    const domain: [number, number] = times.length
+      ? [Math.min(...times), Math.max(...times)]
+      : [0, 0];
+    return scaleTime({ range: [0, xMax], domain });
+  }, [xMax, validData, getX]);
 
   const yScale = useMemo(
     () => {
-      // Find global max across all series
-      const allValues = data.flatMap(d => effectiveSeries.map(s => getValue(d, s.key)));
-      const maxY = Math.max(...allValues);
+      // Find global max across all series. A series key missing from a row
+      // yields NaN, which would poison Math.max and produce a NaN domain.
+      const allValues = validData
+        .flatMap(d => effectiveSeries.map(s => getValue(d, s.key)))
+        .filter(Number.isFinite);
+      const maxY = allValues.length ? Math.max(...allValues) : 0;
 
       return scaleLinear<number>({
         range: [yMax, 0],
         round: true,
-        domain: yDomain || [0, maxY * 1.1],
+        domain: yDomain || [0, maxY > 0 ? maxY * 1.1 : 100],
       });
     },
-    [yMax, data, effectiveSeries, yDomain],
+    [yMax, validData, effectiveSeries, yDomain, getValue],
   );
 
   // Tooltip
@@ -131,19 +158,25 @@ function LineChartContent<T>({
   const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
     const { x } = localPoint(event) || { x: 0 };
     const x0 = xScale.invert(x - margin.left);
-    const index = bisectDate(data, x0, 1);
-    const d0 = data[index - 1];
-    const d1 = data[index];
+    const index = bisectDate(validData, x0, 1);
+    const d0 = validData[index - 1];
+    const d1 = validData[index];
     let d = d0;
-    if (d1 && getX(d1)) {
+    // d0 is undefined when the pointer sits left of the first point; reading
+    // getX(d0) in that case throws.
+    if (d0 && d1) {
       d = x0.valueOf() - getX(d0).valueOf() > getX(d1).valueOf() - x0.valueOf() ? d1 : d0;
     }
 
     if (d) {
+      // A row missing every series key would make Math.max return -Infinity.
+      const values = effectiveSeries
+        .map(s => getValue(d, s.key))
+        .filter(Number.isFinite);
       showTooltip({
         tooltipData: d,
         tooltipLeft: xScale(getX(d)) + margin.left,
-        tooltipTop: yScale(Math.max(...effectiveSeries.map(s => getValue(d, s.key)))) + margin.top, // Heuristic: top of the highest point? Or follow mouse Y?
+        tooltipTop: yScale(values.length ? Math.max(...values) : 0) + margin.top, // Heuristic: top of the highest point? Or follow mouse Y?
         // Better: Find the Y of the closest series, or just render tooltip at the top/mouse position.
         // For now, let's keep it simple: Tooltip is "Master" tooltip showing all values.
       });
@@ -151,6 +184,22 @@ function LineChartContent<T>({
   };
 
   if (width < 10 || height < 100) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative flex flex-col items-center", className)}>
@@ -241,7 +290,7 @@ function LineChartContent<T>({
                    For now, 'areaColor' is legacy. Let's support it for single series. */}
               {effectiveSeries.length === 1 && s.areaColor && (
                 <AreaClosed
-                  data={data}
+                  data={validData}
                   x={d => xScale(getX(d)) ?? 0}
                   y={d => yScale(getValue(d, s.key)) ?? 0}
                   yScale={yScale}
@@ -252,7 +301,7 @@ function LineChartContent<T>({
               )}
 
               <LinePath
-                data={data}
+                data={validData}
                 x={d => xScale(getX(d)) ?? 0}
                 y={d => yScale(getValue(d, s.key)) ?? 0}
                 curve={curveMonotoneX}

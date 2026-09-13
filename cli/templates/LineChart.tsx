@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { AreaClosed, LinePath, Bar } from '@visx/shape';
 import { curveMonotoneX } from '@visx/curve';
 import { Group } from '@visx/group';
@@ -22,6 +22,8 @@ export type LineChartProps<T> = {
   areaColor?: string; // CSS class for area fill
   width?: number;
   height?: number;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 type LineChartContentProps<T> = LineChartProps<T> & {
@@ -38,38 +40,52 @@ function LineChartContent<T>({
   className,
   lineColor = "stroke-primary",
   areaColor = "text-primary", // using text color to set fill via currentColor/opacity
+  emptyMessage = 'No data to display',
 }: LineChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => new Date(d[xKey] as string | number | Date);
-  const getY = (d: T) => Number(d[yKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => new Date(d[xKey] as string | number | Date), [xKey]);
+  const getY = useCallback((d: T) => Number(d[yKey]), [yKey]);
+
+  // Rows whose xKey does not parse to a real date cannot be positioned.
+  const validData = useMemo(
+    () => safeData.filter(d => !Number.isNaN(getX(d).getTime())),
+    [safeData, getX],
+  );
 
   // Bisector for tooltip
-  const bisectDate = bisector<T, Date>(d => getX(d)).left;
+  const bisectDate = useMemo(() => bisector<T, Date>(d => getX(d)).left, [getX]);
 
   // Scales
-  const xScale = useMemo(
-    () =>
-      scaleTime({
-        range: [0, xMax],
-        domain: [Math.min(...data.map(d => getX(d).getTime())), Math.max(...data.map(d => getX(d).getTime()))],
-      }),
-    [xMax, data, xKey],
-  );
+  const xScale = useMemo(() => {
+    const times = validData.map(d => getX(d).getTime());
+    // Math.min/max spread over an empty array yield Infinity/-Infinity, which
+    // are truthy — a `|| 0` fallback never fires and the domain is inverted.
+    const domain: [number, number] = times.length
+      ? [Math.min(...times), Math.max(...times)]
+      : [0, 0];
+    return scaleTime({ range: [0, xMax], domain });
+  }, [xMax, validData, getX]);
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [yMax, 0],
-        round: true,
-        domain: [0, Math.max(...data.map(getY)) * 1.1], // Add some padding
-      }),
-    [yMax, data, yKey],
-  );
+  const yScale = useMemo(() => {
+    const values = validData.map(getY).filter(Number.isFinite);
+    const peak = values.length ? Math.max(...values) : 0;
+    return scaleLinear<number>({
+      range: [yMax, 0],
+      round: true,
+      domain: [0, peak > 0 ? peak * 1.1 : 100], // Add some padding
+    });
+  }, [yMax, validData, getY]);
 
   // Tooltip
   const {
@@ -88,11 +104,13 @@ function LineChartContent<T>({
   const handleTooltip = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
     const { x } = localPoint(event) || { x: 0 };
     const x0 = xScale.invert(x - margin.left);
-    const index = bisectDate(data, x0, 1);
-    const d0 = data[index - 1];
-    const d1 = data[index];
+    const index = bisectDate(validData, x0, 1);
+    const d0 = validData[index - 1];
+    const d1 = validData[index];
     let d = d0;
-    if (d1 && getX(d1)) {
+    // d0 is undefined when the pointer sits left of the first point; reading
+    // getX(d0) in that case throws.
+    if (d0 && d1) {
       d = x0.valueOf() - getX(d0).valueOf() > getX(d1).valueOf() - x0.valueOf() ? d1 : d0;
     }
 
@@ -106,6 +124,22 @@ function LineChartContent<T>({
   };
 
   if (width < 10) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)}>
@@ -149,7 +183,7 @@ function LineChartContent<T>({
           />
 
           <AreaClosed
-            data={data}
+            data={validData}
             x={d => xScale(getX(d)) ?? 0}
             y={d => yScale(getY(d)) ?? 0}
             yScale={yScale}
@@ -159,7 +193,7 @@ function LineChartContent<T>({
           />
 
           <LinePath
-            data={data}
+            data={validData}
             x={d => xScale(getX(d)) ?? 0}
             y={d => yScale(getY(d)) ?? 0}
             curve={curveMonotoneX}

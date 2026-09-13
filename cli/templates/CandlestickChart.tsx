@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Group } from '@visx/group';
 import { scaleTime, scaleLinear } from '@visx/scale';
 import { Bar, Line } from '@visx/shape';
@@ -6,8 +6,7 @@ import { AxisBottom, AxisLeft } from '@visx/axis';
 import { GridRows, GridColumns } from '@visx/grid';
 import { ParentSize } from '@visx/responsive';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
-import { localPoint } from '@visx/event';
-import { bisector, extent } from 'd3-array';
+import { extent } from 'd3-array';
 import { cn } from '../../lib/utils';
 
 export type CandlestickChartProps<T> = {
@@ -25,6 +24,8 @@ export type CandlestickChartProps<T> = {
   showXAxis?: boolean;
   showYAxis?: boolean;
   showGrid?: boolean;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 function CandlestickChartContent<T>({
@@ -44,40 +45,63 @@ function CandlestickChartContent<T>({
   showXAxis = true,
   showYAxis = true,
   showGrid = true,
+  emptyMessage = 'No data to display',
 }: CandlestickChartProps<T> & { width: number; height: number }) {
   const margin = { top: 20, right: 30, bottom: 50, left: 50 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => d[xKey] as Date;
-  const getOpen = (d: T) => Number(d[openKey]);
-  const getHigh = (d: T) => Number(d[highKey]);
-  const getLow = (d: T) => Number(d[lowKey]);
-  const getClose = (d: T) => Number(d[closeKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => new Date(d[xKey] as string | number | Date), [xKey]);
+  const getOpen = useCallback((d: T) => Number(d[openKey]), [openKey]);
+  const getHigh = useCallback((d: T) => Number(d[highKey]), [highKey]);
+  const getLow = useCallback((d: T) => Number(d[lowKey]), [lowKey]);
+  const getClose = useCallback((d: T) => Number(d[closeKey]), [closeKey]);
+
+  // A candle needs a real date and a finite high and low to be drawn.
+  const validData = useMemo(
+    () =>
+      safeData.filter(
+        d =>
+          !Number.isNaN(getX(d).getTime()) &&
+          Number.isFinite(getHigh(d)) &&
+          Number.isFinite(getLow(d)),
+      ),
+    [safeData, getX, getHigh, getLow],
+  );
 
   // Scales
   const xScale = useMemo(
     () =>
       scaleTime({
         range: [0, innerWidth],
-        domain: extent(data, getX) as [Date, Date],
+        // extent returns [undefined, undefined] for an empty input, which
+        // yields an unusable domain.
+        domain: (extent(validData, getX) as [Date, Date]) ?? [new Date(), new Date()],
       }),
-    [innerWidth, data, getX]
+    [innerWidth, validData, getX]
   );
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear({
-        range: [innerHeight, 0],
-        domain: [
-          Math.min(...data.map(getLow)),
-          Math.max(...data.map(getHigh)),
-        ],
-        nice: true,
-      }),
-    [innerHeight, data, getHigh, getLow]
-  );
+  const yScale = useMemo(() => {
+    // Math.min/max spread over an empty array yield Infinity/-Infinity, which
+    // are truthy — a `|| 0` fallback never fires and the domain is inverted.
+    const lows = validData.map(getLow);
+    const highs = validData.map(getHigh);
+    const domain: [number, number] = lows.length
+      ? [Math.min(...lows), Math.max(...highs)]
+      : [0, 100];
+    return scaleLinear({
+      range: [innerHeight, 0],
+      domain,
+      nice: true,
+    });
+  }, [innerHeight, validData, getHigh, getLow]);
 
   // Tooltip
   const {
@@ -93,28 +117,26 @@ function CandlestickChartContent<T>({
     scroll: true,
   });
 
-  const bisectDate = bisector<T, Date>((d) => new Date(d[xKey] as any)).left;
-
-  const handlePointerMove = (event: React.PointerEvent<SVGRectElement>) => {
-    const { x } = localPoint(event) || { x: 0 };
-    const x0 = xScale.invert(x);
-    const index = bisectDate(data, x0, 1);
-    const d0 = data[index - 1];
-    const d1 = data[index];
-    let d = d0;
-    if (d1 && getX(d1)) {
-      d = x0.valueOf() - getX(d0).valueOf() > getX(d1).valueOf() - x0.valueOf() ? d1 : d0;
-    }
-    showTooltip({
-      tooltipData: d,
-      tooltipLeft: xScale(getX(d)),
-      tooltipTop: yScale(Math.max(getOpen(d), getClose(d))),
-    });
-  };
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   // Calculate candle width dynamically based on data length
-  // Use 80% of the available space per data point, capped at a max width
-  const candleWidth = Math.min((innerWidth / data.length) * 0.8, 20);
+  // Use 80% of the available space per data point, capped at a max width.
+  // Dividing by an empty length would make every candle Infinity wide.
+  const candleWidth = Math.min((innerWidth / validData.length) * 0.8, 20);
 
   return (
     <div className={cn("relative", className)}>
@@ -139,7 +161,7 @@ function CandlestickChartContent<T>({
             </>
           )}
 
-          {data.map((d, i) => {
+          {validData.map((d, i) => {
             const open = getOpen(d);
             const close = getClose(d);
             const high = getHigh(d);

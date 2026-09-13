@@ -103,3 +103,64 @@ describe('CandlestickChart', () => {
     expect(closeValue).toBeVisible();
   });
 });
+
+describe('CandlestickChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof mockData;
+
+  const keys = {
+    xKey: 'date',
+    openKey: 'open',
+    highKey: 'high',
+    lowKey: 'low',
+    closeKey: 'close',
+  } as const;
+
+  it('renders a fallback instead of a chart when data is empty', () => {
+    render(<CandlestickChart data={[]} {...keys} />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<CandlestickChart data={[]} {...keys} emptyMessage="No sessions" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No sessions');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<CandlestickChart data={asData(value)} {...keys} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when every row has an unparseable date', () => {
+    render(
+      <CandlestickChart
+        data={asData([{ date: 'not-a-date', open: 1, high: 2, low: 0, close: 1 }])}
+        {...keys}
+      />,
+    );
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders a chart for a single candle', () => {
+    const { container } = render(<CandlestickChart data={[mockData[0]]} {...keys} />);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('produces finite geometry rather than Infinity for a single candle', () => {
+    const { container } = render(<CandlestickChart data={[mockData[0]]} {...keys} />);
+    expect(container.innerHTML).not.toMatch(/Infinity|NaN/);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<CandlestickChart data={[]} {...keys} />);
+    rerender(<CandlestickChart data={mockData} {...keys} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect.cursor-pointer').length).toBe(2);
+  });
+});

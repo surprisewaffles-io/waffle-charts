@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { SankeyChart } from '../SankeyChart';
+
+type SizedChildren = { children: (args: { width: number; height: number }) => ReactNode };
 
 // Mock ParentSize to provide strict dimensions
 vi.mock('@visx/responsive', () => ({
-  ParentSize: ({ children }: any) => children({ width: 800, height: 600 }),
-  parentSize: ({ children }: any) => children({ width: 800, height: 600 }),
+  ParentSize: ({ children }: SizedChildren) => children({ width: 800, height: 600 }),
+  parentSize: ({ children }: SizedChildren) => children({ width: 800, height: 600 }),
 }));
 
 // Mock TooltipInPortal to render directly in DOM for testing
@@ -15,8 +18,8 @@ vi.mock('@visx/tooltip', async () => {
   return {
     ...actual,
     useTooltipInPortal: () => ({
-      containerRef: (node: any) => node,
-      TooltipInPortal: ({ children }: any) => <div>{children}</div>,
+      containerRef: () => { },
+      TooltipInPortal: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     }),
   };
 });
@@ -96,5 +99,65 @@ describe('SankeyChart', () => {
 
     // Let's check for the "Value: 50" text which is likely unique to the tooltip
     expect(await screen.findByText(/Value: 50/i)).toBeInTheDocument();
+  });
+});
+
+describe('SankeyChart edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asData = (value: unknown) => value as typeof sampleData;
+
+  it('renders a fallback instead of a chart when the graph is empty', () => {
+    render(<SankeyChart data={{ nodes: [], links: [] }} />);
+    expect(screen.getByRole('status')).toHaveTextContent('No data to display');
+  });
+
+  it('renders a custom empty message when one is supplied', () => {
+    render(<SankeyChart data={{ nodes: [], links: [] }} emptyMessage="No flows recorded" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No flows recorded');
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders the fallback when data is %s', (_label, value) => {
+    render(<SankeyChart data={asData(value)} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('renders the fallback when nodes exist but no links do', () => {
+    render(<SankeyChart data={{ nodes: [{ name: 'Lonely' }], links: [] }} />);
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
+
+  it('drops a link whose endpoint index has no node rather than throwing', () => {
+    const { container } = render(
+      <SankeyChart
+        data={{
+          nodes: sampleData.nodes,
+          links: [...sampleData.links, { source: 0, target: 99, value: 10 }],
+        }}
+      />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('path')).toHaveLength(2);
+  });
+
+  it('renders a graph with a single link', () => {
+    const { container } = render(
+      <SankeyChart
+        data={{ nodes: [{ name: 'A' }, { name: 'B' }], links: [{ source: 0, target: 1, value: 5 }] }}
+      />,
+    );
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect')).toHaveLength(2);
+  });
+
+  it('keeps hook order stable when data arrives after an empty render', () => {
+    const { container, rerender } = render(<SankeyChart data={{ nodes: [], links: [] }} />);
+    rerender(<SankeyChart data={sampleData} />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('rect')).toHaveLength(3);
   });
 });

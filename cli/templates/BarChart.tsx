@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Bar } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleBand, scaleLinear } from '@visx/scale';
@@ -17,6 +17,8 @@ export type BarChartProps<T> = {
   barColor?: string;
   width?: number;
   height?: number;
+  /** Rendered in place of the chart when `data` holds no plottable rows. */
+  emptyMessage?: string;
 };
 
 // Internal component with required dimensions
@@ -32,16 +34,29 @@ function BarChartContent<T>({
   xKey,
   yKey,
   className,
-  barColor = "bg-primary"
+  barColor = "bg-primary",
+  emptyMessage = 'No data to display',
 }: BarChartContentProps<T>) {
   // Config
   const margin = { top: 40, right: 30, bottom: 50, left: 50 };
   const xMax = width - margin.left - margin.right;
   const yMax = height - margin.top - margin.bottom;
 
-  // Accessors
-  const getX = (d: T) => d[xKey] as string;
-  const getY = (d: T) => Number(d[yKey]);
+  // Every hook below runs unconditionally. `data` is normalised to an array
+  // here rather than guarded with an early return, because an early return
+  // placed above these hooks changes the hook count between renders.
+  const safeData = useMemo(() => (Array.isArray(data) ? data : []), [data]);
+
+  // Accessors are memoised so the scale memos below actually cache — a fresh
+  // closure each render would invalidate them on every pass.
+  const getX = useCallback((d: T) => d[xKey] as string, [xKey]);
+  const getY = useCallback((d: T) => Number(d[yKey]), [yKey]);
+
+  // Rows without a finite value have no bar height.
+  const validData = useMemo(
+    () => safeData.filter(d => Number.isFinite(getY(d))),
+    [safeData, getY],
+  );
 
   // Scales
   const xScale = useMemo(
@@ -49,21 +64,22 @@ function BarChartContent<T>({
       scaleBand<string>({
         range: [0, xMax],
         round: true,
-        domain: data.map(getX),
+        domain: validData.map(getX),
         padding: 0.4,
       }),
-    [xMax, data, xKey],
+    [xMax, validData, getX],
   );
 
-  const yScale = useMemo(
-    () =>
-      scaleLinear<number>({
-        range: [yMax, 0],
-        round: true,
-        domain: [0, Math.max(...data.map(getY))],
-      }),
-    [yMax, data, yKey],
-  );
+  const yScale = useMemo(() => {
+    // Math.max spread over an empty array yields -Infinity, which is truthy —
+    // a `|| 0` fallback never fires and the domain becomes unusable.
+    const peak = validData.length ? Math.max(...validData.map(getY)) : 0;
+    return scaleLinear<number>({
+      range: [yMax, 0],
+      round: true,
+      domain: [0, peak > 0 ? peak : 100],
+    });
+  }, [yMax, validData, getY]);
 
   // Tooltip
   const {
@@ -80,6 +96,22 @@ function BarChartContent<T>({
   });
 
   if (width < 10) return null;
+
+  // Guards sit below every hook so the hook count never varies between renders.
+  if (validData.length === 0) {
+    return (
+      <div
+        role="status"
+        className={cn(
+          "flex items-center justify-center text-sm text-muted-foreground",
+          className,
+        )}
+        style={{ width, height }}
+      >
+        {emptyMessage}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("relative", className)}>
@@ -109,7 +141,7 @@ function BarChartContent<T>({
             }}
             numTicks={5}
           />
-          {data.map((d) => {
+          {validData.map((d) => {
             const letter = getX(d);
             const barWidth = xScale.bandwidth();
             const barHeight = yMax - (yScale(getY(d)) ?? 0);

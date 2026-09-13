@@ -32,3 +32,35 @@ describe('ChartLegend', () => {
     expect(container.firstChild).toHaveClass('justify-center');
   });
 });
+
+describe('ChartLegend edge-case data', () => {
+  // Callers in plain JS can pass anything; the assertion reproduces that
+  // without weakening the component's own types.
+  const asPayload = (value: unknown) => value as { label: string; color: string }[];
+
+  it('renders an empty legend when the payload is empty', () => {
+    const { container } = render(<ChartLegend payload={[]} />);
+    expect(container.firstChild).toBeInTheDocument();
+    expect(container.querySelectorAll('span')).toHaveLength(0);
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+  ])('renders an empty legend when the payload is %s', (_label, value) => {
+    const { container } = render(<ChartLegend payload={asPayload(value)} />);
+    expect(container.firstChild).toBeInTheDocument();
+    expect(container.querySelectorAll('span')).toHaveLength(0);
+  });
+
+  it('renders a legend with a single item', () => {
+    render(<ChartLegend payload={[{ label: 'Solo', color: 'green' }]} />);
+    expect(screen.getByText('Solo')).toBeInTheDocument();
+  });
+
+  it('renders items that arrive after an empty render', () => {
+    const { rerender } = render(<ChartLegend payload={[]} />);
+    rerender(<ChartLegend payload={[{ label: 'Late', color: 'red' }]} />);
+    expect(screen.getByText('Late')).toBeInTheDocument();
+  });
+});

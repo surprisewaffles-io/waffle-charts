@@ -16,6 +16,10 @@ export function ChartLegend({
   orientation = "horizontal",
   className,
 }: ChartLegendProps) {
+  // A legend with nothing to list renders as an empty row rather than a
+  // fallback message; `payload.map` would throw on null or undefined.
+  const items = Array.isArray(payload) ? payload : [];
+
   return (
     <div
       className={cn(
@@ -24,7 +28,7 @@ export function ChartLegend({
         className
       )}
     >
-      {payload.map((item, i) => (
+      {items.map((item, i) => (
         <div key={i} className="flex items-center gap-2">
           <span
             className="h-3 w-3 rounded-full"
