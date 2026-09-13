@@ -143,34 +143,56 @@ export async function add(component, options) {
 
   // 5. Copy Files
   for (const comp of selectedComponents) {
-    const spinner = ora(`Adding ${registry[comp].label}...`).start();
-    const templatePath = path.join(__dirname, '../../templates', registry[comp].file);
-    const destPath = path.join(targetDir, registry[comp].file);
+    const entry = registry[comp];
+    const templatePath = path.join(__dirname, '../../templates', entry.file);
+    const destPath = path.join(targetDir, entry.file);
 
-    try {
-      if (fs.existsSync(templatePath)) {
-        // COPYFILE_EXCL fails instead of writing when destPath already exists.
-        // Without it, a symlink planted at destPath would be followed and the
-        // template written to wherever it points.
-        try {
-          fs.copyFileSync(templatePath, destPath, fs.constants.COPYFILE_EXCL);
-        } catch (copyError) {
-          if (copyError.code !== 'EEXIST') throw copyError;
+    // Check template exists
+    if (!fs.existsSync(templatePath)) {
+      ora(`Adding ${entry.label}...`).start()
+        .fail(`Template for ${comp} not found at ${templatePath}`);
+      continue;
+    }
 
-          // Re-running the CLI over an existing component used to overwrite, so
-          // keep that. Unlink by name first: unlink never follows a symlink, so
-          // the fresh COPYFILE_EXCL copy writes a real file at destPath.
-          if (fs.lstatSync(destPath).isSymbolicLink()) {
-            spinner.fail(`Refusing to overwrite symlink at ${options.path}/${registry[comp].file}`);
-            continue;
-          }
-          fs.unlinkSync(destPath);
-          fs.copyFileSync(templatePath, destPath, fs.constants.COPYFILE_EXCL);
-        }
-        spinner.succeed(`Added ${registry[comp].label} to ${options.path}/${registry[comp].file}`);
-      } else {
-        spinner.fail(`Template for ${comp} not found at ${templatePath}`);
+    // Ask before clobbering a file the user may have customized. The prompt runs
+    // before the spinner starts, because a spinning ora corrupts prompt output.
+    // Default is "no": a dropped or non-interactive answer skips rather than
+    // destroys. `--force` is the opt-out for scripted runs.
+    if (fs.existsSync(destPath) && !options.force) {
+      const response = await prompts({
+        type: 'confirm',
+        name: 'overwrite',
+        message: `${entry.file} already exists. Overwrite?`,
+        initial: false
+      });
+
+      if (!response || response.overwrite !== true) {
+        console.log(chalk.yellow(`Skipped ${entry.label} (file exists)`));
+        continue;
       }
+    }
+
+    const spinner = ora(`Adding ${entry.label}...`).start();
+    try {
+      // COPYFILE_EXCL fails instead of writing when destPath already exists.
+      // Without it, a symlink planted at destPath would be followed and the
+      // template written to wherever it points.
+      try {
+        fs.copyFileSync(templatePath, destPath, fs.constants.COPYFILE_EXCL);
+      } catch (copyError) {
+        if (copyError.code !== 'EEXIST') throw copyError;
+
+        // Re-running the CLI over an existing component used to overwrite, so
+        // keep that. Unlink by name first: unlink never follows a symlink, so
+        // the fresh COPYFILE_EXCL copy writes a real file at destPath.
+        if (fs.lstatSync(destPath).isSymbolicLink()) {
+          spinner.fail(`Refusing to overwrite symlink at ${options.path}/${entry.file}`);
+          continue;
+        }
+        fs.unlinkSync(destPath);
+        fs.copyFileSync(templatePath, destPath, fs.constants.COPYFILE_EXCL);
+      }
+      spinner.succeed(`Added ${entry.label} to ${options.path}/${entry.file}`);
     } catch (error) {
       spinner.fail(`Failed to copy ${comp}`);
       console.error(error);

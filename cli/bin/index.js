@@ -26,6 +26,7 @@ program
   .description('Add a chart component to your project')
   .argument('[component]', 'The component to add (e.g. bar-chart)')
   .option('-p, --path <path>', 'Path to add the component to', 'src/components/ui/waffle')
+  .option('-f, --force', 'Overwrite existing component files without prompting', false)
   .action(add);
 
 program.parse();
