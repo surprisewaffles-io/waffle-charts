@@ -1,4 +1,5 @@
 import { Group } from '@visx/group';
+import { memoChart } from './memo';
 import { ParentSize } from '@visx/responsive';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
@@ -234,7 +235,7 @@ function WaffleChartContent<T>({
   );
 }
 
-export function WaffleChart<T>(props: WaffleChartProps<T>) {
+function WaffleChartRoot<T>(props: WaffleChartProps<T>) {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 200 }}>
       <ParentSize>
@@ -243,3 +244,7 @@ export function WaffleChart<T>(props: WaffleChartProps<T>) {
     </div>
   );
 }
+
+/** Memoised so a parent re-render with unchanged props skips the layout below.
+ *  See `./memo` for what "unchanged" means. (#3) */
+export const WaffleChart = memoChart(WaffleChartRoot);

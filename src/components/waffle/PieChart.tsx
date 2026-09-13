@@ -1,4 +1,5 @@
 import { Pie } from '@visx/shape';
+import { memoChart } from './memo';
 import { Group } from '@visx/group';
 import { scaleOrdinal } from '@visx/scale';
 import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
@@ -195,7 +196,7 @@ function PieChartContent<T>({
   );
 }
 
-export const PieChart = <T,>(props: PieChartProps<T>) => {
+const PieChartRoot = <T,>(props: PieChartProps<T>) => {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 100 }}>
       <ParentSize>
@@ -204,3 +205,7 @@ export const PieChart = <T,>(props: PieChartProps<T>) => {
     </div>
   )
 }
+
+/** Memoised so a parent re-render with unchanged props skips the visx layout
+ *  below. See `./memo` for what "unchanged" means. (#3) */
+export const PieChart = memoChart(PieChartRoot);

@@ -1,4 +1,5 @@
 import { Group } from '@visx/group';
+import { memoChart } from './memo';
 import { Arc } from '@visx/shape';
 import { scaleLinear, scaleOrdinal } from '@visx/scale';
 import { ParentSize } from '@visx/responsive';
@@ -205,7 +206,7 @@ function RadialBarChartContent<T>({
   );
 }
 
-export function RadialBarChart<T>(props: RadialBarChartProps<T>) {
+function RadialBarChartRoot<T>(props: RadialBarChartProps<T>) {
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 200 }}>
       <ParentSize>
@@ -214,3 +215,7 @@ export function RadialBarChart<T>(props: RadialBarChartProps<T>) {
     </div>
   );
 }
+
+/** Memoised so a parent re-render with unchanged props skips the layout below.
+ *  See `./memo` for what "unchanged" means. (#3) */
+export const RadialBarChart = memoChart(RadialBarChartRoot);
