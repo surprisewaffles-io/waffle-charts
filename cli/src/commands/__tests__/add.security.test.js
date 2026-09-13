@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { add } from '../add.js';
 import fs from 'fs-extra';
+import prompts from 'prompts';
 import { execSync } from 'child_process';
 
 // Mock dependencies
@@ -37,6 +38,11 @@ describe('add command - path traversal security', () => {
 
     // Mock execSync
     execSync.mockImplementation(() => {});
+
+    // existsSync is mocked true for every path, which includes the destination
+    // file, so these path-validation cases would otherwise stall on the
+    // overwrite prompt. Answer yes so the copy still happens.
+    prompts.mockResolvedValue({ overwrite: true });
   });
 
   afterEach(() => {

@@ -88,17 +88,38 @@ export async function add(component, options) {
 
   // 5. Copy Files
   for (const comp of selectedComponents) {
-    const spinner = ora(`Adding ${registry[comp].label}...`).start();
-    const templatePath = path.join(__dirname, '../../templates', registry[comp].file);
-    const destPath = path.join(targetDir, registry[comp].file);
+    const entry = registry[comp];
+    const templatePath = path.join(__dirname, '../../templates', entry.file);
+    const destPath = path.join(targetDir, entry.file);
 
-    try {
-      if (fs.existsSync(templatePath)) {
-        fs.copyFileSync(templatePath, destPath);
-        spinner.succeed(`Added ${registry[comp].label} to ${options.path}/${registry[comp].file}`);
-      } else {
-        spinner.fail(`Template for ${comp} not found at ${templatePath}`);
+    if (!fs.existsSync(templatePath)) {
+      ora(`Adding ${entry.label}...`).start()
+        .fail(`Template for ${comp} not found at ${templatePath}`);
+      continue;
+    }
+
+    // Ask before clobbering a file the user may have customized. The prompt runs
+    // before the spinner starts, because a spinning ora corrupts prompt output.
+    // Default is "no": a dropped or non-interactive answer skips rather than
+    // destroys. `--force` is the opt-out for scripted runs.
+    if (fs.existsSync(destPath) && !options.force) {
+      const response = await prompts({
+        type: 'confirm',
+        name: 'overwrite',
+        message: `${entry.file} already exists. Overwrite?`,
+        initial: false
+      });
+
+      if (!response || response.overwrite !== true) {
+        console.log(chalk.yellow(`Skipped ${entry.label} (file exists)`));
+        continue;
       }
+    }
+
+    const spinner = ora(`Adding ${entry.label}...`).start();
+    try {
+      fs.copyFileSync(templatePath, destPath);
+      spinner.succeed(`Added ${entry.label} to ${options.path}/${entry.file}`);
     } catch (error) {
       spinner.fail(`Failed to copy ${comp}`);
       console.error(error);
