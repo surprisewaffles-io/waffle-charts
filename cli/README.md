@@ -27,6 +27,17 @@ Or add specific charts directly:
 npx waffle-charts-cli add bar-chart line-chart
 ```
 
+### Options
+
+| Option | Description |
+| :--- | :--- |
+| `-p, --path <path>` | Where to write the component. Defaults to `src/components/ui/waffle`. |
+| `-f, --force` | Overwrite existing files without asking. |
+
+If a component file already exists, the CLI asks before overwriting it and
+defaults to "no", so a chart you have customized is never replaced silently.
+Pass `--force` in scripts and CI, where there is no one to answer the prompt.
+
 ## Available Charts
 
 - React 16+

@@ -11,6 +11,8 @@ WaffleCharts is not a library you install. It's a collection of primitives you c
 - **Hook ordering**: `CompositeChart` ran its size guard above its hooks, so a shrinking container changed the hook count between renders. Every chart's early returns now sit below all hooks.
 - **Scale domains**: charts no longer spread an empty array through `Math.min`/`Math.max`, which yielded `Infinity`/`-Infinity` domains, nor divide by a zero row count.
 - **Props are no longer mutated**: `SankeyChart` handed the caller's own arrays to d3-sankey, which rewrites link endpoints in place.
+- **CLI symlink escapes**: `waffle-charts add --path` checked the path as a string only, so a symlink inside the project pointing outside it passed and the chart was written out of the project. The path is now resolved on disk before the check, and a symlink sitting at the destination filename is refused instead of written through.
+- **CLI dependency install**: the install command was built by joining strings and handing them to a shell. It now spawns the package manager directly with an argument list and no shell, and passes `--ignore-scripts` so a newly downloaded dependency cannot run install hooks.
 
 ## New in v0.1.6
 - **Funnel Chart**: Added `FunnelChart` for process and conversion visualization.
