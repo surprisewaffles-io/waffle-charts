@@ -28,6 +28,22 @@ export type TreemapData = {
   children?: TreemapData[];
 };
 
+/**
+ * Tiling algorithms the chart accepts, stated as a literal union rather than
+ * `keyof typeof tileMethods`. A `typeof` query over a map of imported
+ * functions has no JSON Schema the generator can derive (#8), and naming the
+ * union also makes the accepted values readable from the prop type alone.
+ */
+export type TreemapTileMethod =
+  | 'binary'
+  | 'squarify'
+  | 'resquarify'
+  | 'slice'
+  | 'dice'
+  | 'sliceDice';
+
+// `satisfies` keeps the map and the union in sync in both directions: a
+// missing key fails to satisfy, an extra key is an excess property.
 const tileMethods = {
   binary: treemapBinary,
   squarify: treemapSquarify,
@@ -35,14 +51,14 @@ const tileMethods = {
   slice: treemapSlice,
   dice: treemapDice,
   sliceDice: treemapSliceDice,
-};
+} satisfies Record<TreemapTileMethod, unknown>;
 
 export type TreemapChartProps = ChartA11yProps & {
   data: TreemapData; // Root node
   width?: number;
   height?: number;
   className?: string;
-  tileMethod?: keyof typeof tileMethods;
+  tileMethod?: TreemapTileMethod;
   background?: string;
   colorScheme?: string[];
   /** Rendered in place of the chart when `data` holds no sized nodes. */
