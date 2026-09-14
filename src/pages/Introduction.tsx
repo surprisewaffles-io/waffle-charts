@@ -45,6 +45,24 @@ export function IntroductionPage() {
             Written in strict TypeScript. Generics allow your data shape to drive the chart's type safety from top to bottom.
           </p>
         </div>
+        <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <h3 className="font-semibold text-lg mb-2">Accessible by Default</h3>
+          <p className="text-sm text-muted-foreground">
+            WCAG 2.1 Level AA compliant. Full keyboard navigation, screen reader support, and focus indicators built in.
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <h3 className="font-semibold text-lg mb-2">Performance Optimized</h3>
+          <p className="text-sm text-muted-foreground">
+            React.memo on all charts skips unnecessary rerenders. Smart structural comparison keeps your dashboards fast.
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-6 shadow-sm">
+          <h3 className="font-semibold text-lg mb-2">Zero Vulnerabilities</h3>
+          <p className="text-sm text-muted-foreground">
+            All 20 dependency vulnerabilities resolved. CLI hardened against path traversal and command injection.
+          </p>
+        </div>
       </div>
 
       {/* Use Cases Section */}
@@ -148,6 +166,110 @@ export function IntroductionPage() {
               Then navigate to any chart page, copy the code, and paste it into your project.
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* What's New Section */}
+      <div className="space-y-6 border rounded-lg p-6 bg-card">
+        <h2 className="text-2xl font-semibold tracking-tight">What's New in v0.2.0</h2>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <span className="text-primary">♿</span> Accessibility
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Full WCAG 2.1 Level AA compliance across all 16 charts. Keyboard navigation with Tab, Arrow keys, Enter, and Escape.
+              Screen reader support with ARIA labels, off-screen data tables, and live announcements.
+            </p>
+            <a href="#/docs/accessibility" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              View Accessibility Guide →
+            </a>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <span className="text-primary">⚡</span> Performance
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              All charts wrapped in React.memo with smart structural comparison. Parent rerenders no longer trigger
+              expensive chart layout recalculations when props haven't changed.
+            </p>
+            <a href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/README.md#performance" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              Read Performance Guide →
+            </a>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <span className="text-primary">🔒</span> Security
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              20 dependency vulnerabilities eliminated (1 critical, 14 high, 4 moderate, 1 low).
+              CLI hardened against path traversal, command injection, and unauthorized file overwrites.
+            </p>
+            <a href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/README.md#security" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              View Security Details →
+            </a>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <span className="text-primary">🧪</span> Testing
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              379 passing tests (398% increase). Comprehensive coverage: accessibility, empty data handling,
+              performance validation, and chart selector algorithm testing.
+            </p>
+            <a href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/docs/DEVELOPER.md#testing" className="text-sm text-primary hover:underline inline-flex items-center gap-1">
+              Developer Guide →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Documentation Links */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold tracking-tight">Documentation</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <a
+            href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/docs/ACCESSIBILITY.md"
+            className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <h3 className="font-semibold mb-2">Accessibility Guide</h3>
+            <p className="text-sm text-muted-foreground">
+              WCAG 2.1 Level AA compliance details, keyboard navigation reference, screen reader testing guide.
+            </p>
+          </a>
+
+          <a
+            href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/docs/DEVELOPER.md"
+            className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <h3 className="font-semibold mb-2">Developer Guide</h3>
+            <p className="text-sm text-muted-foreground">
+              Component metadata, chart selector, JSON schemas, testing strategies, performance optimization.
+            </p>
+          </a>
+
+          <a
+            href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/MIGRATION.md"
+            className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <h3 className="font-semibold mb-2">Migration Guide</h3>
+            <p className="text-sm text-muted-foreground">
+              Upgrading to v0.2.0 with complete backwards compatibility. All changes are opt-in enhancements.
+            </p>
+          </a>
+
+          <a
+            href="https://github.com/surprisewaffles-io/waffle-charts/blob/main/CHANGELOG.md"
+            className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <h3 className="font-semibold mb-2">Changelog</h3>
+            <p className="text-sm text-muted-foreground">
+              Complete version history following Keep a Changelog format. Detailed list of all improvements.
+            </p>
+          </a>
         </div>
       </div>
     </div>

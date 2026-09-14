@@ -161,7 +161,60 @@ Role queries (`getByRole('table')`, `getByRole('cell')`) still reach the table.
 
 Keyboard traversal, the focus ring, and the generated description were checked in Chromium 153 against `BarChart`, `PieChart`, `LineChart`, `TreemapChart`, and `HeatmapChart`. The ARIA structure follows the [Graphics ARIA](https://www.w3.org/WAI/ARIA/apg/patterns/) guidance for `role="img"`: shapes inside an `img` are hidden from assistive tech, which is why per-point information travels through the live region and the data table rather than through the SVG.
 
-<<<<<<< HEAD
+## Security
+
+**Zero vulnerabilities.** All 20 dependency vulnerabilities have been resolved:
+- 1 critical → 0
+- 14 high → 0
+- 4 moderate → 0
+- 1 low → 0
+
+**CLI security hardening:**
+- Path traversal protection with symlink resolution
+- Command injection prevention via direct process spawning
+- File overwrite protection (requires confirmation or `--force` flag)
+- `--ignore-scripts` flag prevents npm lifecycle hook execution
+
+Run `npm audit` to verify zero vulnerabilities in your installation.
+
+## Testing
+
+**379 passing tests** with 398% increase in coverage:
+
+```bash
+# Run all tests
+npm test
+
+# Generate coverage report
+npm run test:coverage
+
+# Open interactive coverage viewer
+npm run test:coverage:ui
+```
+
+**Coverage thresholds:**
+- Lines: 80%
+- Functions: 80%
+- Branches: 75%
+- Statements: 80%
+
+**Test categories:**
+- Unit tests (component rendering and behavior)
+- Accessibility tests (WCAG compliance, keyboard navigation, ARIA)
+- Empty data tests (resilience testing)
+- Performance tests (React.memo behavior)
+- Metadata tests (registry integrity)
+- Selector tests (recommendation algorithm)
+
+See [Developer Guide](docs/DEVELOPER.md#testing) for detailed testing documentation.
+
+## Documentation
+
+- **[Accessibility Guide](docs/ACCESSIBILITY.md)** — WCAG 2.1 Level AA compliance, keyboard navigation, screen reader support
+- **[Developer Guide](docs/DEVELOPER.md)** — Component metadata, chart selector, JSON schemas, testing, performance optimization
+- **[Migration Guide](MIGRATION.md)** — Upgrading to v0.2.0 with backwards compatibility notes
+- **[Changelog](CHANGELOG.md)** — Complete version history following Keep a Changelog format
+
 ## Component metadata
 
 Every chart publishes a machine-readable description of itself next to the
@@ -235,7 +288,7 @@ The same facts back `npx waffle-charts-cli add`. The CLI reads
 two catalogs are compared field by field in
 `src/components/waffle/__tests__/metadata.consistency.test.ts`, so they fail the
 build rather than drift apart.
-=======
+
 ## Runtime validation
 
 TypeScript checks chart props when you compile. Props that arrive as data — from an agent, a CMS, or a JSON fixture — reach a chart unchecked, where a wrong type shows up as an empty or broken render rather than an error naming the prop.
@@ -283,7 +336,6 @@ npm run generate:schemas
 ```
 
 A test compares the committed schemas against freshly generated ones, so changing a prop type without regenerating fails the suite rather than shipping a stale schema.
->>>>>>> origin/main
 
 ## Contributing
 Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.
