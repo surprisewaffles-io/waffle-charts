@@ -51,6 +51,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`SankeyChart` rendered no link ribbons** — only the node bars appeared
+  - The link `<path>` read a `path` property off each laid-out link, but d3-sankey never sets one, so every ribbon rendered with an empty `d`
+  - The geometry now comes from `createPath`, the `sankeyLinkHorizontal` generator the visx `Sankey` render prop supplies
+  - A `size` prop was also overriding `extent`, discarding the chart's margins; `extent` is now the only layout prop passed
+  - Link hover used `hover:stroke-opacity-50`, which is not a Tailwind utility and never applied; replaced with an arbitrary-property variant
+  - Applies to both `src/components/waffle/SankeyChart.tsx` and the `waffle-charts add sankey` CLI template
 - **SECURITY: 20 dependency vulnerabilities resolved** (1 critical, 14 high, 4 moderate, 1 low)
   - Updated all packages to latest secure versions
   - Zero vulnerabilities remaining (`npm audit` clean)

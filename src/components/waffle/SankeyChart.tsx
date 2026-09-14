@@ -50,14 +50,24 @@ export type SankeyChartProps = ChartA11yProps & {
  * link type describes the graph *before* layout, where `source`/`target` are
  * still plain indices and the geometry is absent, so the rendered arrays are
  * read through these shapes instead.
+ *
+ * Note there is no `path` here: d3-sankey computes each link's `width` and
+ * endpoint coordinates but never a path string. The ribbon's `d` comes from
+ * `createPath` below. (#19)
  */
 type LaidOutLink = {
-  path?: string;
   width?: number;
   value: number;
   source: { name: string };
   target: { name: string };
 };
+
+/**
+ * `sankeyLinkHorizontal()` as the `Sankey` render prop hands it over: it maps a
+ * laid-out link to the ribbon's `d`, returning null when the layout left an
+ * endpoint without coordinates.
+ */
+type LinkPathBuilder = (link: LaidOutLink) => string | null;
 
 /**
  * Resolves a link endpoint to a node index. A caller supplies an index, but a
@@ -246,25 +256,29 @@ function SankeyChartContent({
           title={a11y.resolvedTitle}
           description={a11y.resolvedDescription}
         />
+        {/* `extent` carries the margins; a `size` prop would override it,
+            because visx applies size after extent and size resets the origin
+            to [0,0]. Pass only one of the two. (#19) */}
         <Sankey
           root={graphData}
-          size={[innerWidth, innerHeight]}
           nodeWidth={15}
           nodePadding={10}
           extent={[[margin.left, margin.top], [innerWidth + margin.left, innerHeight + margin.top]]}
         >
-          {({ graph }) => (
+          {({ graph, createPath }) => {
+            const buildPath = createPath as unknown as LinkPathBuilder;
+            return (
             <Group>
               {/* Links */}
               {(graph.links as unknown as LaidOutLink[]).map((link, i) => (
                 <path
                   key={`link-${i}`}
-                  d={link.path || ''}
+                  d={buildPath(link) ?? ''}
                   stroke="currentColor"
                   strokeOpacity={0.2}
                   fill="none"
                   strokeWidth={Math.max(1, link.width || 0)}
-                  className="text-foreground transition-opacity duration-200 hover:stroke-opacity-50"
+                  className="text-foreground transition-[stroke-opacity] duration-200 hover:[stroke-opacity:0.5]"
                   onMouseEnter={(event) => {
                     const containerRect = svgRef.current?.getBoundingClientRect();
                     const containerLeft = containerRect?.left || 0;
@@ -320,7 +334,8 @@ function SankeyChartContent({
                 </Group>
               ))}
             </Group>
-          )}
+            );
+          }}
         </Sankey>
       </svg>
       <ChartA11yLayer

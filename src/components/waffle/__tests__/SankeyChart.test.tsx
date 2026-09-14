@@ -64,6 +64,34 @@ describe('SankeyChart', () => {
     expect(container.querySelectorAll('path')).toHaveLength(2);
   });
 
+  // d3-sankey never sets a `path` property on a laid-out link; the geometry
+  // comes from `createPath` off the render prop. Counting <path> elements is
+  // not enough, because a path with an empty `d` still counts. (#19)
+  it('draws link geometry rather than empty paths', () => {
+    const { container } = render(<SankeyChart data={sampleData} />);
+    const links = Array.from(container.querySelectorAll('path'));
+
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      const d = link.getAttribute('d');
+      expect(d).toBeTruthy();
+      // sankeyLinkHorizontal emits a cubic Bezier: "M…C…".
+      expect(d).toMatch(/^M[\d.,\-\s]+C/);
+    }
+  });
+
+  it('scales link stroke width by value', () => {
+    const { container } = render(<SankeyChart data={sampleData} />);
+    const widths = Array.from(container.querySelectorAll('path')).map(link =>
+      Number(link.getAttribute('stroke-width')),
+    );
+
+    // 50 and 30 flow into the same target, so neither link is hairline-thin
+    // and the larger value gets the thicker ribbon.
+    expect(widths.every(width => width > 1)).toBe(true);
+    expect(Math.max(...widths)).toBeGreaterThan(Math.min(...widths));
+  });
+
   it('shows tooltip on hover over a node', async () => {
     const user = userEvent.setup();
     render(<SankeyChart data={sampleData} />);
