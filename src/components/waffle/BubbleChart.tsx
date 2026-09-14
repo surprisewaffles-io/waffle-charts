@@ -14,6 +14,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 
 // Types
 export type BubbleChartProps<T> = ChartA11yProps & {
@@ -295,3 +300,29 @@ const BubbleChartRoot = <T,>(props: BubbleChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const BubbleChart = memoChart(BubbleChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const BubbleChartMeta = {
+  name: 'BubbleChart',
+  category: 'relationship',
+  description:
+    'A scatter plot with a third variable encoded as circle radius, so three numeric measures read at once.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 200,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: number; [yKey]: number; [zKey]: number }>',
+    requiredFields: ['x', 'y', 'z'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'yKey', 'zKey'],
+    optionalProps: ['minRadius', 'maxRadius', 'pointClassName', 'className', 'emptyMessage'],
+    notes:
+      'zKey drives radius between minRadius and maxRadius. All three values must be finite or the row is dropped. Radius encodes area poorly for wide ranges — keep zKey within roughly two orders of magnitude.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'numeric', 'empty-state', 'custom-colors'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type BubbleChartMetadata = typeof BubbleChartMeta;

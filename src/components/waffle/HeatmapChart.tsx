@@ -11,6 +11,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { useMemo } from 'react';
 
 // Types
@@ -263,3 +268,29 @@ const HeatmapChartRoot = (props: HeatmapChartProps) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const HeatmapChart = memoChart(HeatmapChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const HeatmapChartMeta = {
+  name: 'HeatmapChart',
+  category: 'distribution',
+  description:
+    'A grid of rectangles whose fill interpolates between two colours by count, for reading density across two binned dimensions.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 100,
+    kind: 'rows',
+    shape: 'Array<{ bin: number; bins: Array<{ bin: number; count: number }> }>',
+    requiredFields: ['bin', 'bins'],
+    fixedFieldNames: true,
+    requiredProps: ['data'],
+    optionalProps: ['colorRange', 'gap', 'className', 'emptyMessage'],
+    notes:
+      'The outer array is columns, each `bins` array is that column\'s rows. Columns with an empty `bins` array are dropped. Field names are fixed — there are no accessor props.',
+  },
+  capabilities: ['responsive', 'tooltip', 'matrix', 'empty-state', 'custom-colors'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type HeatmapChartMetadata = typeof HeatmapChartMeta;

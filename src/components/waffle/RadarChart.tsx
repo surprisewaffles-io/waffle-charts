@@ -10,6 +10,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { useCallback, useMemo } from 'react';
 
 export type RadarChartProps<T> = ChartA11yProps & {
@@ -261,3 +266,29 @@ const RadarChartRoot = <T,>(props: RadarChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the layout below.
  *  See `./memo` for what "unchanged" means. (#3) */
 export const RadarChart = memoChart(RadarChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const RadarChartMeta = {
+  name: 'RadarChart',
+  category: 'comparison',
+  description:
+    'Spokes radiating from a centre, joined into a polygon, for comparing one subject across several axes at once.',
+  dataRequirements: {
+    minRows: 3,
+    maxRecommended: 12,
+    kind: 'rows',
+    shape: 'Array<{ [angleKey]: string; [radiusKey]: number }>',
+    requiredFields: ['axis', 'score'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'angleKey', 'radiusKey'],
+    optionalProps: ['gridColor', 'polygonColor', 'className', 'emptyMessage'],
+    notes:
+      'Fewer than three spokes leaves no enclosed area. This component renders no tooltip.',
+  },
+  capabilities: ['responsive', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type RadarChartMetadata = typeof RadarChartMeta;

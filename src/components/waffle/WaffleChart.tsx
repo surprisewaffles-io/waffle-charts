@@ -10,6 +10,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { useCallback, useMemo } from 'react';
 
 export type WaffleChartProps<T> = ChartA11yProps & {
@@ -303,3 +308,29 @@ function WaffleChartRoot<T>(props: WaffleChartProps<T>) {
 /** Memoised so a parent re-render with unchanged props skips the layout below.
  *  See `./memo` for what "unchanged" means. (#3) */
 export const WaffleChart = memoChart(WaffleChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const WaffleChartMeta = {
+  name: 'WaffleChart',
+  category: 'composition',
+  description:
+    'A grid of cells, ten by ten by default, where each category claims a cell count proportional to its share. Easier to read precisely than a pie.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 6,
+    kind: 'rows',
+    shape: 'Array<{ [labelKey]: string; [valueKey]: number }>',
+    requiredFields: ['label', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'labelKey', 'valueKey'],
+    optionalProps: ['total', 'rows', 'columns', 'gap', 'rounding', 'colors', 'className', 'testId', 'emptyMessage'],
+    notes:
+      'Without `total` the values are normalised against their own sum, filling every cell. Pass `total` to leave the remainder uncoloured. Wrap in a container with a height.',
+  },
+  capabilities: ['responsive', 'tooltip', 'part-to-whole', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type WaffleChartMetadata = typeof WaffleChartMeta;
