@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/RadarChartProps",
+  "definitions": {
+    "RadarChartProps": {
+      "$ref": "#/definitions/RadarChartProps%3CChartDatum%3E"
+    },
+    "RadarChartProps<ChartDatum>": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ChartDatum"
+          }
+        },
+        "radiusKey": {
+          "type": [
+            "string"
+          ]
+        },
+        "angleKey": {
+          "type": [
+            "string"
+          ]
+        },
+        "className": {
+          "type": "string"
+        },
+        "gridColor": {
+          "type": "string"
+        },
+        "polygonColor": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "emptyMessage": {
+          "type": "string",
+          "description": "Rendered in place of the chart when `data` holds no plottable rows."
+        },
+        "ariaLabel": {
+          "type": "string",
+          "description": "Accessible name for the chart. Falls back to a generated summary."
+        },
+        "ariaDescribedby": {
+          "type": "string",
+          "description": "Id of an element elsewhere on the page that describes the chart."
+        },
+        "title": {
+          "type": "string",
+          "description": "Human title rendered into the SVG's `<title>`."
+        },
+        "description": {
+          "type": "string",
+          "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+        },
+        "keyboardNavigable": {
+          "type": "boolean",
+          "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+        }
+      },
+      "required": [
+        "angleKey",
+        "data",
+        "radiusKey"
+      ]
+    },
+    "ChartDatum": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+    }
+  }
+}

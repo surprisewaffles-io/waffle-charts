@@ -12,6 +12,8 @@
     */
     "types": ["vite/client", "node"],
     "skipLibCheck": true,
+    /* The generated prop schemas are imported as JSON by src/schemas. */
+    "resolveJsonModule": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

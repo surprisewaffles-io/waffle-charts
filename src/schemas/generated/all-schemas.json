@@ -1,0 +1,1661 @@
+{
+  "AreaChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/AreaChartProps",
+    "definitions": {
+      "AreaChartProps": {
+        "$ref": "#/definitions/AreaChartProps%3CChartDatum%3E"
+      },
+      "AreaChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string"
+              ]
+            }
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "className": {
+            "type": "string"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "showXAxis": {
+            "type": "boolean"
+          },
+          "showYAxis": {
+            "type": "boolean"
+          },
+          "showGridRows": {
+            "type": "boolean"
+          },
+          "showGridColumns": {
+            "type": "boolean"
+          },
+          "xAxisLabel": {
+            "type": "string"
+          },
+          "yAxisLabel": {
+            "type": "string"
+          },
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "keys",
+          "xKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "BarChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/BarChartProps",
+    "definitions": {
+      "BarChartProps": {
+        "$ref": "#/definitions/BarChartProps%3CChartDatum%3E"
+      },
+      "BarChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "yKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "variant": {
+            "type": "string",
+            "enum": [
+              "simple",
+              "stacked",
+              "grouped"
+            ]
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "className": {
+            "type": "string"
+          },
+          "barColor": {
+            "type": "string"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "showXAxis": {
+            "type": "boolean"
+          },
+          "showYAxis": {
+            "type": "boolean"
+          },
+          "showGridRows": {
+            "type": "boolean"
+          },
+          "showGridColumns": {
+            "type": "boolean"
+          },
+          "xAxisLabel": {
+            "type": "string"
+          },
+          "yAxisLabel": {
+            "type": "string"
+          },
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
+          },
+          "yDomain": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "xKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "BubbleChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/BubbleChartProps",
+    "definitions": {
+      "BubbleChartProps": {
+        "$ref": "#/definitions/BubbleChartProps%3CChartDatum%3E"
+      },
+      "BubbleChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "yKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "zKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "pointClassName": {
+            "type": "string"
+          },
+          "bubbleColor": {
+            "type": "string"
+          },
+          "colorScheme": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "minRadius": {
+            "type": "number"
+          },
+          "maxRadius": {
+            "type": "number"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "xKey",
+          "yKey",
+          "zKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "CandlestickChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/CandlestickChartProps",
+    "definitions": {
+      "CandlestickChartProps": {
+        "$ref": "#/definitions/CandlestickChartProps%3CChartDatum%3E"
+      },
+      "CandlestickChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "openKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "highKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "lowKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "closeKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "upColor": {
+            "type": "string"
+          },
+          "downColor": {
+            "type": "string"
+          },
+          "showXAxis": {
+            "type": "boolean"
+          },
+          "showYAxis": {
+            "type": "boolean"
+          },
+          "showGridRows": {
+            "type": "boolean"
+          },
+          "showGridColumns": {
+            "type": "boolean"
+          },
+          "xAxisLabel": {
+            "type": "string"
+          },
+          "yAxisLabel": {
+            "type": "string"
+          },
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "closeKey",
+          "data",
+          "highKey",
+          "lowKey",
+          "openKey",
+          "xKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "ChordChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/ChordChartProps",
+    "definitions": {
+      "ChordChartProps": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            }
+          },
+          "keys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colorScheme": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no usable matrix."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "keys"
+        ]
+      }
+    }
+  },
+  "CompositeChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/CompositeChartProps",
+    "definitions": {
+      "CompositeChartProps": {
+        "$ref": "#/definitions/CompositeChartProps%3CChartDatum%3E"
+      },
+      "CompositeChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "barKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "lineKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "barColor": {
+            "type": "string"
+          },
+          "lineColor": {
+            "type": "string"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "barKey",
+          "data",
+          "lineKey",
+          "xKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "FunnelChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/FunnelChartProps",
+    "definitions": {
+      "FunnelChartProps": {
+        "$ref": "#/definitions/FunnelChartProps%3CChartDatum%3E"
+      },
+      "FunnelChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "stepKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "valueKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "stepKey",
+          "valueKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "HeatmapChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/HeatmapChartProps",
+    "definitions": {
+      "HeatmapChartProps": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HeatmapData"
+            }
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colorRange": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "gap": {
+            "type": "number"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable columns."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "HeatmapData": {
+        "type": "object",
+        "properties": {
+          "bin": {
+            "type": "number"
+          },
+          "bins": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "bin": {
+                  "type": "number"
+                },
+                "count": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "bin",
+                "count"
+              ]
+            }
+          }
+        },
+        "required": [
+          "bin",
+          "bins"
+        ]
+      }
+    }
+  },
+  "LineChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/LineChartProps",
+    "definitions": {
+      "LineChartProps": {
+        "$ref": "#/definitions/LineChartProps%3CChartDatum%3E"
+      },
+      "LineChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "yKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "lineColor": {
+            "type": "string"
+          },
+          "areaColor": {
+            "type": "string"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": [
+                    "string"
+                  ]
+                },
+                "color": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "areaColor": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key"
+              ]
+            }
+          },
+          "showXAxis": {
+            "type": "boolean"
+          },
+          "showYAxis": {
+            "type": "boolean"
+          },
+          "showGridRows": {
+            "type": "boolean"
+          },
+          "showGridColumns": {
+            "type": "boolean"
+          },
+          "xAxisLabel": {
+            "type": "string"
+          },
+          "yAxisLabel": {
+            "type": "string"
+          },
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
+          },
+          "yDomain": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "xKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "PieChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/PieChartProps",
+    "definitions": {
+      "PieChartProps": {
+        "$ref": "#/definitions/PieChartProps%3CChartDatum%3E"
+      },
+      "PieChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "valueKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "labelKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "innerRadius": {
+            "type": "number"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "centerText": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "subtitle": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "title"
+            ]
+          },
+          "margin": {
+            "type": "object",
+            "properties": {
+              "top": {
+                "type": "number"
+              },
+              "right": {
+                "type": "number"
+              },
+              "bottom": {
+                "type": "number"
+              },
+              "left": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "top",
+              "right",
+              "bottom",
+              "left"
+            ]
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "labelKey",
+          "valueKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "RadarChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/RadarChartProps",
+    "definitions": {
+      "RadarChartProps": {
+        "$ref": "#/definitions/RadarChartProps%3CChartDatum%3E"
+      },
+      "RadarChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "radiusKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "angleKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "gridColor": {
+            "type": "string"
+          },
+          "polygonColor": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "angleKey",
+          "data",
+          "radiusKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "RadialBarChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/RadialBarChartProps",
+    "definitions": {
+      "RadialBarChartProps": {
+        "$ref": "#/definitions/RadialBarChartProps%3CChartDatum%3E"
+      },
+      "RadialBarChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "valueKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "labelKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "maxValue": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "startAngle": {
+            "type": "number"
+          },
+          "endAngle": {
+            "type": "number"
+          },
+          "innerRadius": {
+            "type": "number"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "labelKey",
+          "valueKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "SankeyChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/SankeyChartProps",
+    "definitions": {
+      "SankeyChartProps": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/definitions/SankeyData"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colorScheme": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no drawable graph."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "SankeyData": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SankeyNode"
+            }
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SankeyLink"
+            }
+          }
+        },
+        "required": [
+          "nodes",
+          "links"
+        ]
+      },
+      "SankeyNode": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "index": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "SankeyLink": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "number"
+          },
+          "target": {
+            "type": "number"
+          },
+          "value": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "value"
+        ]
+      }
+    }
+  },
+  "ScatterChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/ScatterChartProps",
+    "definitions": {
+      "ScatterChartProps": {
+        "$ref": "#/definitions/ScatterChartProps%3CChartDatum%3E"
+      },
+      "ScatterChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "xKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "yKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "className": {
+            "type": "string"
+          },
+          "pointClassName": {
+            "type": "string"
+          },
+          "pointColor": {
+            "type": "string"
+          },
+          "pointRadius": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "xKey",
+          "yKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  },
+  "TreemapChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/TreemapChartProps",
+    "definitions": {
+      "TreemapChartProps": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/definitions/TreemapData"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "tileMethod": {
+            "$ref": "#/definitions/TreemapTileMethod"
+          },
+          "background": {
+            "type": "string"
+          },
+          "colorScheme": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no sized nodes."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "TreemapData": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "parent": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/TreemapData"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "TreemapTileMethod": {
+        "type": "string",
+        "enum": [
+          "binary",
+          "squarify",
+          "resquarify",
+          "slice",
+          "dice",
+          "sliceDice"
+        ],
+        "description": "Tiling algorithms the chart accepts, stated as a literal union rather than `keyof typeof tileMethods`. A `typeof` query over a map of imported functions has no JSON Schema the generator can derive (#8), and naming the union also makes the accepted values readable from the prop type alone."
+      }
+    }
+  },
+  "WaffleChart": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$ref": "#/definitions/WaffleChartProps",
+    "definitions": {
+      "WaffleChartProps": {
+        "$ref": "#/definitions/WaffleChartProps%3CChartDatum%3E"
+      },
+      "WaffleChartProps<ChartDatum>": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ChartDatum"
+            }
+          },
+          "labelKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "valueKey": {
+            "type": [
+              "string"
+            ]
+          },
+          "total": {
+            "type": "number"
+          },
+          "rows": {
+            "type": "number"
+          },
+          "columns": {
+            "type": "number"
+          },
+          "width": {
+            "type": "number"
+          },
+          "height": {
+            "type": "number"
+          },
+          "gap": {
+            "type": "number"
+          },
+          "rounding": {
+            "type": "number"
+          },
+          "className": {
+            "type": "string"
+          },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "testId": {
+            "type": "string"
+          },
+          "emptyMessage": {
+            "type": "string",
+            "description": "Rendered in place of the chart when `data` holds no plottable rows."
+          },
+          "ariaLabel": {
+            "type": "string",
+            "description": "Accessible name for the chart. Falls back to a generated summary."
+          },
+          "ariaDescribedby": {
+            "type": "string",
+            "description": "Id of an element elsewhere on the page that describes the chart."
+          },
+          "title": {
+            "type": "string",
+            "description": "Human title rendered into the SVG's `<title>`."
+          },
+          "description": {
+            "type": "string",
+            "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+          },
+          "keyboardNavigable": {
+            "type": "boolean",
+            "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+          }
+        },
+        "required": [
+          "data",
+          "labelKey",
+          "valueKey"
+        ]
+      },
+      "ChartDatum": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "The row shape the generic charts are instantiated at. An open record is the widest type that still resolves `keyof T` to `string`, so a generated schema accepts any caller's row type rather than one sample's fields."
+      }
+    }
+  }
+}

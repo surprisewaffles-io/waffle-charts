@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/TreemapChartProps",
+  "definitions": {
+    "TreemapChartProps": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/TreemapData"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "className": {
+          "type": "string"
+        },
+        "tileMethod": {
+          "$ref": "#/definitions/TreemapTileMethod"
+        },
+        "background": {
+          "type": "string"
+        },
+        "colorScheme": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "emptyMessage": {
+          "type": "string",
+          "description": "Rendered in place of the chart when `data` holds no sized nodes."
+        },
+        "ariaLabel": {
+          "type": "string",
+          "description": "Accessible name for the chart. Falls back to a generated summary."
+        },
+        "ariaDescribedby": {
+          "type": "string",
+          "description": "Id of an element elsewhere on the page that describes the chart."
+        },
+        "title": {
+          "type": "string",
+          "description": "Human title rendered into the SVG's `<title>`."
+        },
+        "description": {
+          "type": "string",
+          "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+        },
+        "keyboardNavigable": {
+          "type": "boolean",
+          "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "TreemapData": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "parent": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TreemapData"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "TreemapTileMethod": {
+      "type": "string",
+      "enum": [
+        "binary",
+        "squarify",
+        "resquarify",
+        "slice",
+        "dice",
+        "sliceDice"
+      ],
+      "description": "Tiling algorithms the chart accepts, stated as a literal union rather than `keyof typeof tileMethods`. A `typeof` query over a map of imported functions has no JSON Schema the generator can derive (#8), and naming the union also makes the accepted values readable from the prop type alone."
+    }
+  }
+}
