@@ -104,6 +104,29 @@ export const registry = {
 };
 
 /**
+ * Why: every chart now also publishes its metadata as a runtime TypeScript
+ * export, so a reader who found a chart in this catalog needs to know where the
+ * importable copy lives (#10). Storing that path on each of the seventeen
+ * entries would be seventeen copies of one naming convention; deriving it from
+ * the `file` and `name` the entry already carries cannot fall out of step.
+ *
+ * What: the import specifier for an entry's `<Chart>Meta` export, or null for
+ * `chart-legend`, which is a utility component and publishes no metadata.
+ *
+ * Test: `metadataImportPath` cases in `cli/src/registry/__tests__/registry.test.js`
+ *
+ * @param {string} slug - a registry slug, e.g. `bar-chart`
+ * @returns {string | null} e.g. `@/components/waffle/BarChart#BarChartMeta`
+ */
+export function metadataImportPath(slug) {
+  const entry = registry[Object.prototype.hasOwnProperty.call(registry, slug) ? slug : ''];
+  if (!entry || entry.category === 'utility') return null;
+
+  const module = entry.file.replace(/\.tsx$/, '');
+  return `@/components/waffle/${module}#${entry.name}Meta`;
+}
+
+/**
  * Why: the catalog advertises each entry's React component name (`BarChart`),
  * so a reader who found a chart there reaches for that spelling on the command
  * line. Only the slug (`bar-chart`) used to resolve, and the mismatch surfaced

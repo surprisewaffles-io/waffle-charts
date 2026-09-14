@@ -11,6 +11,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { useMemo, useState, useRef } from 'react';
 import { Group } from '@visx/group';
 import { localPoint } from '@visx/event';
@@ -273,3 +278,29 @@ const ChordChartRoot = (props: ChordChartProps) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const ChordChart = memoChart(ChordChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const ChordChartMeta = {
+  name: 'ChordChart',
+  category: 'relationship',
+  description:
+    'A circle of arcs joined by ribbons whose width is the volume exchanged between each pair, read from a square matrix.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 12,
+    kind: 'matrix',
+    shape: 'number[][] — a square matrix, plus keys: string[] naming each index',
+    requiredFields: [],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'keys'],
+    optionalProps: ['colorScheme', 'className', 'emptyMessage'],
+    notes:
+      '`data[i][j]` is the flow from group i to group j. A ragged or non-numeric matrix is padded with zeros to a square. `keys` must be as long as the matrix side. An all-zero matrix renders the empty state.',
+  },
+  capabilities: ['responsive', 'tooltip', 'matrix', 'empty-state', 'custom-colors'],
+  complexity: 'complex',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type ChordChartMetadata = typeof ChordChartMeta;

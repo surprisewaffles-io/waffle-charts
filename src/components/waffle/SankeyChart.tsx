@@ -11,6 +11,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import React, { useMemo } from 'react';
 
 // Types for your Sankey data
@@ -352,3 +357,29 @@ const SankeyChartRoot = (props: SankeyChartProps) => {
 /** Memoised so a parent re-render with unchanged props skips the sankey layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const SankeyChart = memoChart(SankeyChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const SankeyChartMeta = {
+  name: 'SankeyChart',
+  category: 'flow',
+  description:
+    'Nodes in columns joined by ribbons whose thickness is the quantity moving between them, for tracing where a total splits and recombines.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 40,
+    kind: 'graph',
+    shape: '{ nodes: Array<{ name: string }>; links: Array<{ source: number; target: number; value: number }> }',
+    requiredFields: ['nodes', 'links'],
+    fixedFieldNames: true,
+    requiredProps: ['data'],
+    optionalProps: ['colorScheme', 'className', 'emptyMessage'],
+    notes:
+      '`source` and `target` are indices into `nodes`, not names. The graph must be acyclic — a cycle makes the layout fail to converge.',
+  },
+  capabilities: ['responsive', 'tooltip', 'empty-state', 'custom-colors'],
+  complexity: 'complex',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type SankeyChartMetadata = typeof SankeyChartMeta;

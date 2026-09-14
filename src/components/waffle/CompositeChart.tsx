@@ -15,6 +15,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import React, { useCallback, useMemo } from 'react';
 
 // Types
@@ -350,3 +355,29 @@ function CompositeChartRoot<T>(props: CompositeChartProps<T>) {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const CompositeChart = memoChart(CompositeChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const CompositeChartMeta = {
+  name: 'CompositeChart',
+  category: 'comparison',
+  description:
+    'Bars and a line share one x axis on independent left and right y scales, so a count and a rate can be read together.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 40,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: string; [barKey]: number; [lineKey]: number }>',
+    requiredFields: ['month', 'revenue', 'margin'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'barKey', 'lineKey'],
+    optionalProps: ['barColor', 'lineColor', 'className', 'emptyMessage'],
+    notes:
+      'A row needs both barKey and lineKey finite, or it is dropped.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'dual-axis', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'complex',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type CompositeChartMetadata = typeof CompositeChartMeta;

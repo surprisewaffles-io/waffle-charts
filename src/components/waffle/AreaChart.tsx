@@ -11,6 +11,11 @@ import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
 import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
 import { useChartA11y, type ChartA11yProps } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { bisector } from 'd3-array';
 
 export type AreaChartProps<T> = ChartA11yProps & {
@@ -360,3 +365,29 @@ const AreaChartRoot = <T,>(props: AreaChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const AreaChart = memoChart(AreaChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const AreaChartMeta = {
+  name: 'AreaChart',
+  category: 'distribution',
+  description:
+    'Stacked areas over a time scale: each key in `keys` becomes one band, and the bands sum to the total at every x position.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 365,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: string | number | Date; [key in keys]: number }>',
+    requiredFields: ['date', 'desktop', 'mobile'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'keys'],
+    optionalProps: ['colors', 'className', 'emptyMessage'],
+    notes:
+      '`keys` lists the series fields to stack, in draw order. Missing or non-numeric series values count as zero. xKey must parse as a date.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'temporal', 'multi-series', 'empty-state', 'custom-colors'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type AreaChartMetadata = typeof AreaChartMeta;

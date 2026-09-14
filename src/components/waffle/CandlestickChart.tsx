@@ -15,6 +15,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { min, max } from 'd3-array';
 
 export type CandlestickData = {
@@ -374,3 +379,29 @@ const CandlestickChartRoot = <T,>(props: CandlestickChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const CandlestickChart = memoChart(CandlestickChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const CandlestickChartMeta = {
+  name: 'CandlestickChart',
+  category: 'financial',
+  description:
+    'One candle per period over a time scale: the body spans open to close, the wick spans low to high, and the fill colour marks a rise or a fall.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 250,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: string | number | Date; [openKey]: number; [highKey]: number; [lowKey]: number; [closeKey]: number }>',
+    requiredFields: ['date', 'open', 'high', 'low', 'close'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'openKey', 'highKey', 'lowKey', 'closeKey'],
+    optionalProps: ['upColor', 'downColor', 'xAxisLabel', 'yAxisLabel', 'showXAxis', 'showYAxis', 'showGrid', 'className', 'emptyMessage'],
+    notes:
+      'xKey is passed to `new Date()` and must parse. Rows missing a finite high or low are dropped. This component renders a bare ParentSize with no wrapper, so the parent element must have a height.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'temporal', 'empty-state', 'custom-colors'],
+  complexity: 'complex',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type CandlestickChartMetadata = typeof CandlestickChartMeta;

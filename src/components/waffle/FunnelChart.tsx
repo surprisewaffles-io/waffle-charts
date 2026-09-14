@@ -10,6 +10,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 
 export type FunnelChartProps<T> = ChartA11yProps & {
   data: T[];
@@ -274,3 +279,29 @@ function FunnelChartRoot<T>(props: FunnelChartProps<T>) {
 /** Memoised so a parent re-render with unchanged props skips the layout below.
  *  See `./memo` for what "unchanged" means. (#3) */
 export const FunnelChart = memoChart(FunnelChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const FunnelChartMeta = {
+  name: 'FunnelChart',
+  category: 'composition',
+  description:
+    'Stacked horizontal bands, each narrowed in proportion to its value, for reading drop-off between ordered stages.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 8,
+    kind: 'rows',
+    shape: 'Array<{ [stepKey]: string; [valueKey]: number }>',
+    requiredFields: ['step', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'stepKey', 'valueKey'],
+    optionalProps: ['colors', 'className', 'emptyMessage'],
+    notes:
+      'Row order is stage order — the array is not sorted. Band width is relative to the largest value, so pass stages already in descending sequence. Wrap in a container with a height.',
+  },
+  capabilities: ['responsive', 'tooltip', 'part-to-whole', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'simple',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type FunnelChartMetadata = typeof FunnelChartMeta;
