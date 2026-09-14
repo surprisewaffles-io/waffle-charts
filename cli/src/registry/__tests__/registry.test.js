@@ -2,7 +2,14 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { registry, resolveComponent, CATEGORIES, COMPLEXITY_LEVELS, CAPABILITIES } from '../index.js';
+import {
+  registry,
+  resolveComponent,
+  metadataImportPath,
+  CATEGORIES,
+  COMPLEXITY_LEVELS,
+  CAPABILITIES,
+} from '../index.js';
 import { registry as registryViaShim } from '../../registry.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -124,4 +131,33 @@ describe('resolveComponent', () => {
     expect(resolveComponent('constructor')).toBeNull();
     expect(resolveComponent('toString')).toBeNull();
   });
+});
+
+describe('metadataImportPath', () => {
+  it('should point at the component’s own metadata export', () => {
+    expect(metadataImportPath('bar-chart')).toBe('@/components/waffle/BarChart#BarChartMeta');
+    expect(metadataImportPath('radial-bar-chart')).toBe(
+      '@/components/waffle/RadialBarChart#RadialBarChartMeta',
+    );
+  });
+
+  it.each(entries.filter(([, entry]) => entry.category !== 'utility'))(
+    'should derive a path from the file and name of %s',
+    (slug, entry) => {
+      expect(metadataImportPath(slug)).toBe(
+        `@/components/waffle/${entry.file.replace(/\.tsx$/, '')}#${entry.name}Meta`,
+      );
+    },
+  );
+
+  it('should return null for a utility component, which publishes no metadata', () => {
+    expect(metadataImportPath('chart-legend')).toBeNull();
+  });
+
+  it.each([['no-such-chart'], [''], ['constructor'], ['toString']])(
+    'should return null for the unresolvable slug %s',
+    (slug) => {
+      expect(metadataImportPath(slug)).toBeNull();
+    },
+  );
 });

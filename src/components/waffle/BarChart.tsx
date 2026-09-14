@@ -15,6 +15,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 
 // Types
 export type BarChartProps<T> = ChartA11yProps & {
@@ -514,3 +519,28 @@ const BarChartRoot = <T,>(props: BarChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const BarChart = memoChart(BarChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const BarChartMeta = {
+  name: 'BarChart',
+  category: 'comparison',
+  description:
+    'Vertical bars on a band scale for ranking one numeric measure across discrete categories.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 50,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: string; [yKey]: number }>',
+    requiredFields: ['label', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'yKey'],
+    optionalProps: ['barColor', 'className', 'emptyMessage'],
+    notes: 'Rows whose yKey is not a finite number are dropped before scaling.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'simple',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type BarChartMetadata = typeof BarChartMeta;

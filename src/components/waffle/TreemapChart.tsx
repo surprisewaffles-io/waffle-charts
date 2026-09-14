@@ -18,6 +18,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { useMemo } from 'react';
 
 // Types
@@ -28,6 +33,22 @@ export type TreemapData = {
   children?: TreemapData[];
 };
 
+/**
+ * Tiling algorithms the chart accepts, stated as a literal union rather than
+ * `keyof typeof tileMethods`. A `typeof` query over a map of imported
+ * functions has no JSON Schema the generator can derive (#8), and naming the
+ * union also makes the accepted values readable from the prop type alone.
+ */
+export type TreemapTileMethod =
+  | 'binary'
+  | 'squarify'
+  | 'resquarify'
+  | 'slice'
+  | 'dice'
+  | 'sliceDice';
+
+// `satisfies` keeps the map and the union in sync in both directions: a
+// missing key fails to satisfy, an extra key is an excess property.
 const tileMethods = {
   binary: treemapBinary,
   squarify: treemapSquarify,
@@ -35,14 +56,14 @@ const tileMethods = {
   slice: treemapSlice,
   dice: treemapDice,
   sliceDice: treemapSliceDice,
-};
+} satisfies Record<TreemapTileMethod, unknown>;
 
 export type TreemapChartProps = ChartA11yProps & {
   data: TreemapData; // Root node
   width?: number;
   height?: number;
   className?: string;
-  tileMethod?: keyof typeof tileMethods;
+  tileMethod?: TreemapTileMethod;
   background?: string;
   colorScheme?: string[];
   /** Rendered in place of the chart when `data` holds no sized nodes. */
@@ -237,3 +258,29 @@ const TreemapChartRoot = (props: TreemapChartProps) => {
 /** Memoised so a parent re-render with unchanged props skips the treemap layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const TreemapChart = memoChart(TreemapChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const TreemapChartMeta = {
+  name: 'TreemapChart',
+  category: 'composition',
+  description:
+    'Nested rectangles sized by a leaf\'s `size`, for showing how a hierarchy divides a total.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 200,
+    kind: 'tree',
+    shape: '{ name: string; size?: number; children?: TreemapData[] }',
+    requiredFields: ['name'],
+    fixedFieldNames: true,
+    requiredProps: ['data'],
+    optionalProps: ['tileMethod', 'background', 'className', 'emptyMessage'],
+    notes:
+      '`data` is a single root node, not an array. Only leaves carry `size`; parent totals are summed. `tileMethod` accepts squarify, binary, resquarify, slice, dice, or sliceDice. This component renders no tooltip.',
+  },
+  capabilities: ['responsive', 'hierarchical', 'part-to-whole', 'empty-state', 'custom-colors'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type TreemapChartMetadata = typeof TreemapChartMeta;

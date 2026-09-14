@@ -7,6 +7,9 @@ Modeled after the philosophy of [shadcn/ui](https://ui.shadcn.com).
 WaffleCharts is not a library you install. It's a collection of primitives you copy into your project. You own the code, the DOM, and the styling.
 
 ## Unreleased
+- **Component metadata**: every chart now exports a `<Chart>Meta` object describing its category, data requirements, capabilities, and accessibility, importable at runtime. `metadata.ts` collects all 16 with lookups by category, capability, complexity, and row count, and `lib/metadata-helpers.ts` validates data and props against it. See [Component metadata](#component-metadata).
+- **Runtime prop validation**: a JSON Schema is now generated from each of the 16 charts' prop types, with an Ajv-backed `validateProps` helper and a development-only wrapper that warns on bad props. See [Runtime validation](#runtime-validation).
+- **`TreemapChart.tileMethod`**: the accepted tiling algorithms are now a named `TreemapTileMethod` union instead of `keyof typeof` over an internal map. The accepted values are unchanged.
 - **Render skipping**: all 16 charts are wrapped in `React.memo`, so a parent re-render no longer re-runs the chart's layout when its props are unchanged. See [Performance](#performance).
 - **Accessibility (WCAG 2.1 Level AA)**: every chart is now reachable by keyboard and readable by a screen reader. See [Accessibility](#accessibility). Applies to `AreaChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChartLegend`, `ChordChart`, `CompositeChart`, `FunnelChart`, `HeatmapChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
 - **Empty data**: every chart now survives empty, `null`, or `undefined` data, rendering a fallback message instead of breaking. The message is customizable via the `emptyMessage` prop. Covers `AreaChart`, `HeatmapChart`, `BarChart`, `BubbleChart`, `CandlestickChart`, `ChordChart`, `CompositeChart`, `FunnelChart`, `LineChart`, `PieChart`, `RadarChart`, `RadialBarChart`, `SankeyChart`, `ScatterChart`, `TreemapChart`, and `WaffleChart`.
@@ -211,6 +214,128 @@ See [Developer Guide](docs/DEVELOPER.md#testing) for detailed testing documentat
 - **[Developer Guide](docs/DEVELOPER.md)** — Component metadata, chart selector, JSON schemas, testing, performance optimization
 - **[Migration Guide](MIGRATION.md)** — Upgrading to v0.2.0 with backwards compatibility notes
 - **[Changelog](CHANGELOG.md)** — Complete version history following Keep a Changelog format
+
+## Component metadata
+
+Every chart publishes a machine-readable description of itself next to the
+component, so code — and agents writing code — can ask what a chart needs
+instead of guessing.
+
+```tsx
+import { BarChart, BarChartMeta } from '@/components/waffle/BarChart';
+
+BarChartMeta.category;                      // 'comparison'
+BarChartMeta.dataRequirements.minRows;      // 1
+BarChartMeta.dataRequirements.requiredProps; // ['data', 'xKey', 'yKey']
+```
+
+The metadata is declared `as const`, so those reads keep their literal types:
+`category` is `'comparison'`, not `string`.
+
+### Querying the catalog
+
+`metadata.ts` collects all sixteen and adds the lookups:
+
+```tsx
+import {
+  ComponentMetadata,
+  getComponentMeta,
+  getComponentsByCategory,
+  getComponentsByCapability,
+  getComponentsForRowCount,
+} from '@/components/waffle/metadata';
+
+getComponentMeta('PieChart').complexity;     // 'simple'
+getComponentsByCategory('composition');      // ['FunnelChart', 'PieChart', 'TreemapChart', 'WaffleChart']
+getComponentsByCapability('dual-axis');      // ['CompositeChart']
+getComponentsForRowCount(400);               // charts whose range covers 400 rows, tightest fit first
+```
+
+Importing `metadata.ts` pulls in all sixteen components. Import a single
+`<Chart>Meta` from its own module when you only need one.
+
+### Validating data before you render
+
+```tsx
+import { validateDataShape, validateProps } from '@/lib/metadata-helpers';
+
+validateDataShape('BarChart', []);
+// { valid: false, errors: ['Minimum 1 rows required'], warnings: [] }
+
+validateDataShape('PieChart', twentyRows);
+// { valid: true, errors: [], warnings: ['Recommended maximum 7 rows, received 20'] }
+```
+
+`errors` mean the chart cannot draw the data. `warnings` mean it will draw but
+stop being readable — `maxRecommended` is a legibility ceiling, so exceeding it
+leaves `valid` true.
+
+`validateDataShape` takes `unknown` rather than an array because `data` is not
+an array for every chart. `TreemapChart` takes one root node, `SankeyChart`
+takes `{ nodes, links }`, and `ChordChart` takes a matrix; each entry's
+`dataRequirements.kind` says which, and the validator counts rows accordingly.
+
+Field names are only checked for `HeatmapChart`, `SankeyChart`, and
+`TreemapChart`, the three components with no accessor props. Every other chart
+reads whatever fields its `*Key` props point at, so its `requiredFields` is the
+catalog example's naming rather than a contract.
+
+### Metadata and the CLI catalog
+
+The same facts back `npx waffle-charts-cli add`. The CLI reads
+`cli/src/registry/`, and `metadataImportPath('bar-chart')` returns
+`@/components/waffle/BarChart#BarChartMeta` — where the runtime copy lives. The
+two catalogs are compared field by field in
+`src/components/waffle/__tests__/metadata.consistency.test.ts`, so they fail the
+build rather than drift apart.
+
+## Runtime validation
+
+TypeScript checks chart props when you compile. Props that arrive as data — from an agent, a CMS, or a JSON fixture — reach a chart unchecked, where a wrong type shows up as an empty or broken render rather than an error naming the prop.
+
+A JSON Schema is generated from each chart's prop types to close that gap:
+
+```typescript
+import { validateProps } from './schemas';
+
+const validation = validateProps('BarChart', props);
+if (!validation.valid) {
+  console.error('Invalid props:', validation.errors);
+  // ["(root) must have required property 'xKey'", "/data must be array"]
+}
+```
+
+To validate automatically while developing, wrap the chart. The check runs only in development — `import.meta.env.DEV` is a build constant, so the branch is dropped from production bundles — and each distinct failure is logged once rather than on every re-render:
+
+```typescript
+import { createValidatedComponent } from './schemas';
+import { BarChart } from './components/waffle/BarChart';
+
+export const ValidatedBarChart = createValidatedComponent(BarChart, 'BarChart');
+```
+
+### Reading the schemas
+
+The schemas are committed under `src/schemas/generated/` — one file per chart plus a combined `all-schemas.json` — so a tool can read them without running a build. Every schema uses the same `$ref` + `definitions` shape; `getPropsDefinition` follows the refs for you and returns the object that lists the props:
+
+```typescript
+import { getPropsDefinition, chartNames } from './schemas';
+
+getPropsDefinition('BarChart').required;   // ['data', 'xKey']
+chartNames;                                 // all 16 chart names
+```
+
+Two limits worth knowing. Callback props such as `onClick` and `tickFormat` are absent, because JSON Schema cannot describe a function — passing them is accepted, not flagged. And the generic charts are described at an open row type, so `data` entries are checked for being objects rather than for your specific fields.
+
+### Regenerating
+
+`npm run build` regenerates the schemas first, so they cannot ship behind the types. To run it alone:
+
+```bash
+npm run generate:schemas
+```
+
+A test compares the committed schemas against freshly generated ones, so changing a prop type without regenerating fails the suite rather than shipping a stale schema.
 
 ## Contributing
 Interested in developing WaffleCharts? See our [Contributing Guide](CONTRIBUTING.md) for instructions on running the project locally.

@@ -12,6 +12,11 @@ import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
 import { ChartA11yLayer, ChartSvgDescription } from './ChartA11y';
 import { useChartA11y, type ChartA11yProps } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { bisector } from 'd3-array';
 
 // Types
@@ -482,3 +487,29 @@ const LineChartRoot = <T,>(props: LineChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const LineChart = memoChart(LineChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const LineChartMeta = {
+  name: 'LineChart',
+  category: 'distribution',
+  description:
+    'A monotone curve over a time scale with a soft area fill, a hover crosshair, and a point marker that snaps to the nearest row.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 500,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: string | number | Date; [yKey]: number }>',
+    requiredFields: ['date', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'yKey'],
+    optionalProps: ['lineColor', 'areaColor', 'className', 'emptyMessage'],
+    notes:
+      'xKey is passed to `new Date()`, so it must parse as a date. Rows that do not are dropped. A single row draws no line.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'temporal', 'empty-state', 'custom-colors'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type LineChartMetadata = typeof LineChartMeta;

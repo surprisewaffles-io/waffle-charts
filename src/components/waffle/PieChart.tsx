@@ -12,6 +12,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 import { arc as d3arc } from 'd3-shape'; // Direct import for custom arc generation
 
 // Types
@@ -268,3 +273,29 @@ const PieChartRoot = <T,>(props: PieChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const PieChart = memoChart(PieChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const PieChartMeta = {
+  name: 'PieChart',
+  category: 'composition',
+  description:
+    'Arcs sized by share of the total. Set `innerRadius` above zero to render a donut with optional centre text.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 7,
+    kind: 'rows',
+    shape: 'Array<{ [labelKey]: string; [valueKey]: number }>',
+    requiredFields: ['label', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'labelKey', 'valueKey'],
+    optionalProps: ['innerRadius', 'colors', 'centerText', 'className', 'emptyMessage'],
+    notes:
+      'Only rows with a finite value greater than zero occupy an arc; zero and negative rows are dropped. Past about seven slices the arcs stop being readable — use a bar chart instead.',
+  },
+  capabilities: ['responsive', 'tooltip', 'part-to-whole', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'simple',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type PieChartMetadata = typeof PieChartMeta;

@@ -14,6 +14,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 
 // Types
 export type ScatterChartProps<T> = ChartA11yProps & {
@@ -264,3 +269,29 @@ const ScatterChartRoot = <T,>(props: ScatterChartProps<T>) => {
 /** Memoised so a parent re-render with unchanged props skips the visx layout
  *  below. See `./memo` for what "unchanged" means. (#3) */
 export const ScatterChart = memoChart(ScatterChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const ScatterChartMeta = {
+  name: 'ScatterChart',
+  category: 'relationship',
+  description:
+    'One circle per row on two linear axes, for reading correlation, clustering, and outliers between two numeric variables.',
+  dataRequirements: {
+    minRows: 2,
+    maxRecommended: 1000,
+    kind: 'rows',
+    shape: 'Array<{ [xKey]: number; [yKey]: number }>',
+    requiredFields: ['x', 'y'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'xKey', 'yKey'],
+    optionalProps: ['pointClassName', 'className', 'emptyMessage'],
+    notes:
+      'Both coordinates must be finite numbers or the row is dropped.',
+  },
+  capabilities: ['responsive', 'tooltip', 'axes', 'grid', 'numeric', 'empty-state', 'custom-colors'],
+  complexity: 'simple',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type ScatterChartMetadata = typeof ScatterChartMeta;

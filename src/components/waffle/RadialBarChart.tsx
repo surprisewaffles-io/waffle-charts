@@ -11,6 +11,11 @@ import {
   useChartA11y,
   type ChartA11yProps,
 } from '../../lib/chart-a11y';
+import {
+  CHART_A11Y_BASELINE,
+  MEMOIZED_PERFORMANCE,
+  type ChartMetadata,
+} from './metadata-types';
 
 export type RadialBarChartProps<T> = ChartA11yProps & {
   data: T[];
@@ -270,3 +275,29 @@ function RadialBarChartRoot<T>(props: RadialBarChartProps<T>) {
 /** Memoised so a parent re-render with unchanged props skips the layout below.
  *  See `./memo` for what "unchanged" means. (#3) */
 export const RadialBarChart = memoChart(RadialBarChartRoot);
+
+/** Machine-readable description of this chart, for agents and validation. (#10) */
+export const RadialBarChartMeta = {
+  name: 'RadialBarChart',
+  category: 'comparison',
+  description:
+    'Concentric arcs, one ring per row, for comparing a handful of values or showing progress toward a shared target.',
+  dataRequirements: {
+    minRows: 1,
+    maxRecommended: 8,
+    kind: 'rows',
+    shape: 'Array<{ [labelKey]: string; [valueKey]: number }>',
+    requiredFields: ['label', 'value'],
+    fixedFieldNames: false,
+    requiredProps: ['data', 'labelKey', 'valueKey'],
+    optionalProps: ['maxValue', 'colors', 'startAngle', 'endAngle', 'innerRadius', 'className', 'emptyMessage'],
+    notes:
+      'Pass maxValue to make rings read as progress against a fixed target; otherwise the largest row sets the scale. Wrap in a container with a height.',
+  },
+  capabilities: ['responsive', 'tooltip', 'empty-state', 'custom-colors', 'categorical'],
+  complexity: 'moderate',
+  accessibility: CHART_A11Y_BASELINE,
+  performance: MEMOIZED_PERFORMANCE,
+} as const satisfies ChartMetadata;
+
+export type RadialBarChartMetadata = typeof RadialBarChartMeta;
