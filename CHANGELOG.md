@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Gradient flow ribbons in `SankeyChart`** — each link now fades from its source
+  node's colour to its target node's colour, so a flow reads as leaving one column
+  and arriving at the next (Solar purple → Grid teal, Grid teal → Industry orange)
+  - One `<linearGradient>` per link in a `<defs>` block, with stops at `0%` and `100%`
+  - Gradient ids are scoped per mounted chart, so two Sankeys on a page keep their
+    own colours instead of both resolving to the first `<defs>`
+  - Ribbon thickness, hover opacity (0.2 → 0.5), and tooltips are unchanged
 - **WCAG 2.1 Level AA accessibility compliance** for all 16 charts
   - Keyboard navigation (Tab, Arrow keys, Home, End, Enter, Space, Escape)
   - ARIA attributes and screen reader support with `role="img"`, `aria-label`, and semantic structure

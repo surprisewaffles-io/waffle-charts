@@ -130,6 +130,127 @@ describe('SankeyChart', () => {
   });
 });
 
+// The ribbons are stroked, not filled: `sankeyLinkHorizontal` emits a centre
+// line and the thickness comes from stroke-width, so the gradient has to paint
+// `stroke`. Painting `fill` would colour the region the curve encloses instead
+// of the ribbon.
+describe('SankeyChart link gradients', () => {
+  /**
+   * jsdom's selector engine matches `linearGradient` only as the rightmost
+   * part of a selector, never as an ancestor: `defs linearGradient` finds the
+   * gradients, but `linearGradient stop` and `defs > stop` both return nothing
+   * and would make an assertion over the stops pass vacuously. So the
+   * gradients are selected first and their stops read by scoping from the
+   * element. Real browsers do not need this; do not fold these back into one
+   * selector.
+   */
+  const gradientsIn = (container: Element) =>
+    Array.from(container.querySelectorAll('defs linearGradient'));
+
+  const stopsOf = (gradient: Element) => Array.from(gradient.querySelectorAll('stop'));
+
+  /** A gradient's stop colours, in document order. */
+  const stopColorsOf = (gradient: Element) =>
+    stopsOf(gradient).map(stop => stop.getAttribute('stop-color'));
+
+  it('points every link stroke at a gradient defined in the same svg', () => {
+    const { container } = render(<SankeyChart data={sampleData} />);
+    const links = Array.from(container.querySelectorAll('path'));
+
+    expect(links).toHaveLength(2);
+    for (const link of links) {
+      const stroke = link.getAttribute('stroke') ?? '';
+      const id = stroke.match(/^url\(#(.+)\)$/)?.[1];
+      expect(id, `stroke should be a gradient reference, got ${stroke}`).toBeTruthy();
+      expect(container.querySelector(`defs > linearGradient[id="${id}"]`)).not.toBeNull();
+    }
+  });
+
+  it('runs each gradient from its source node colour to its target node colour', () => {
+    const colorScheme = ['#111111', '#222222', '#333333'];
+    const { container } = render(<SankeyChart data={sampleData} colorScheme={colorScheme} />);
+
+    // Domain order follows `data.nodes`: Source A, Source B, Target.
+    // Link 0 is Source A → Target, link 1 is Source B → Target. Compared as a
+    // set because the layout is free to reorder the links array.
+    const pairs = gradientsIn(container).map(stopColorsOf);
+
+    expect(pairs).toHaveLength(2);
+    expect(pairs).toContainEqual(['#111111', '#333333']);
+    expect(pairs).toContainEqual(['#222222', '#333333']);
+  });
+
+  it('matches each node rect fill to the gradient stop that meets it', () => {
+    const colorScheme = ['#111111', '#222222', '#333333'];
+    const { container } = render(<SankeyChart data={sampleData} colorScheme={colorScheme} />);
+
+    const rectFills = Array.from(container.querySelectorAll('rect')).map(rect =>
+      rect.getAttribute('fill'),
+    );
+    const stopColors = gradientsIn(container).flatMap(stopColorsOf);
+
+    // A ribbon only reads as leaving one node and arriving at another if its
+    // two ends carry those nodes' own colours.
+    expect(stopColors).toHaveLength(4);
+    for (const color of stopColors) {
+      expect(rectFills).toContain(color);
+    }
+  });
+
+  it('runs the gradient left to right along the ribbon span', () => {
+    const { container } = render(<SankeyChart data={sampleData} />);
+    const gradients = gradientsIn(container);
+
+    expect(gradients).toHaveLength(2);
+    for (const gradient of gradients) {
+      // userSpaceOnUse, because objectBoundingBox measures the fill box — which
+      // ignores stroke width and is degenerate for a straight ribbon.
+      expect(gradient.getAttribute('gradientUnits')).toBe('userSpaceOnUse');
+      const x1 = Number(gradient.getAttribute('x1'));
+      const x2 = Number(gradient.getAttribute('x2'));
+      expect(Number.isFinite(x1) && Number.isFinite(x2)).toBe(true);
+      expect(x2).toBeGreaterThan(x1);
+      // Horizontal: no vertical component.
+      expect(gradient.getAttribute('y1')).toBe(gradient.getAttribute('y2'));
+    }
+
+    for (const gradient of gradients) {
+      const offsets = stopsOf(gradient).map(stop => stop.getAttribute('offset'));
+      expect(offsets).toEqual(['0%', '100%']);
+    }
+  });
+
+  it('keeps the existing link opacity', () => {
+    const { container } = render(<SankeyChart data={sampleData} />);
+
+    for (const link of container.querySelectorAll('path')) {
+      expect(link.getAttribute('stroke-opacity')).toBe('0.2');
+      expect(link.getAttribute('class')).toContain('hover:[stroke-opacity:0.5]');
+    }
+  });
+
+  it('gives two charts on one page disjoint gradient ids', () => {
+    // A shared id would make both charts resolve to whichever <defs> the
+    // browser parsed first, so the second chart would wear the first's colours.
+    const { container } = render(
+      <>
+        <SankeyChart data={sampleData} colorScheme={['#111111', '#222222', '#333333']} />
+        <SankeyChart data={sampleData} colorScheme={['#aaaaaa', '#bbbbbb', '#cccccc']} />
+      </>,
+    );
+
+    const ids = gradientsIn(container).map(gradient => gradient.getAttribute('id'));
+
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
+    // querySelector rejects the ':' useId embeds, so the ids must be stripped
+    // of it — this is what makes the lookup in the first test work at all.
+    for (const id of ids) {
+      expect(id).toMatch(/^[A-Za-z0-9_-]+$/);
+    }
+  });
+});
+
 describe('SankeyChart edge-case data', () => {
   // Callers in plain JS can pass anything; the assertion reproduces that
   // without weakening the component's own types.

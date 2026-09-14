@@ -16,7 +16,7 @@ import {
   MEMOIZED_PERFORMANCE,
   type ChartMetadata,
 } from './metadata-types';
-import React, { useMemo } from 'react';
+import React, { useId, useMemo } from 'react';
 
 // Types for your Sankey data
 export type SankeyNode = {
@@ -54,12 +54,16 @@ export type SankeyChartProps = ChartA11yProps & {
  * Note there is no `path` here: d3-sankey computes each link's `width` and
  * endpoint coordinates but never a path string. The ribbon's `d` comes from
  * `createPath` below. (#19)
+ *
+ * `source.x1` and `target.x0` are the ribbon's two attachment edges. They span
+ * the gradient below, so the fade lines up with the ribbon rather than with the
+ * whole chart.
  */
 type LaidOutLink = {
   width?: number;
   value: number;
-  source: { name: string };
-  target: { name: string };
+  source: { name: string; x1: number };
+  target: { name: string; x0: number };
 };
 
 /**
@@ -174,6 +178,13 @@ function SankeyChartContent({
   /* Use a separate ref for measuring the SVG position if needed for relative tooltip calculations */
   const svgRef = React.useRef<SVGSVGElement>(null);
 
+  // Gradient ids must be unique per mounted chart: two Sankeys on one page
+  // would otherwise define `sankey-gradient-0` twice, and every reference in
+  // the document resolves to whichever definition the browser saw first.
+  // useId embeds ':' delimiters, which querySelector and CSS selectors reject,
+  // so they are stripped — the instance counter inside carries the uniqueness.
+  const gradientPrefix = `sankey-gradient-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
+
   // Merge refs (containerRef from visx needs to be called with the element)
   const setRefs = (node: SVGSVGElement | null) => {
     containerRef(node);
@@ -267,18 +278,44 @@ function SankeyChartContent({
         >
           {({ graph, createPath }) => {
             const buildPath = createPath as unknown as LinkPathBuilder;
+            const links = graph.links as unknown as LaidOutLink[];
             return (
             <Group>
+              {/* One gradient per ribbon, fading the source node's colour into
+                  the target's so a flow reads as leaving one column and
+                  arriving at the next.
+
+                  userSpaceOnUse anchors the gradient to the ribbon's own
+                  attachment edges. The default (objectBoundingBox) would
+                  measure the path's fill box, which ignores stroke width and
+                  collapses to zero height on a perfectly straight ribbon. */}
+              <defs>
+                {links.map((link, i) => (
+                  <linearGradient
+                    key={`link-gradient-${i}`}
+                    id={`${gradientPrefix}-${i}`}
+                    gradientUnits="userSpaceOnUse"
+                    x1={link.source.x1}
+                    x2={link.target.x0}
+                    y1={0}
+                    y2={0}
+                  >
+                    <stop offset="0%" stopColor={colorScale(link.source.name)} />
+                    <stop offset="100%" stopColor={colorScale(link.target.name)} />
+                  </linearGradient>
+                ))}
+              </defs>
+
               {/* Links */}
-              {(graph.links as unknown as LaidOutLink[]).map((link, i) => (
+              {links.map((link, i) => (
                 <path
                   key={`link-${i}`}
                   d={buildPath(link) ?? ''}
-                  stroke="currentColor"
+                  stroke={`url(#${gradientPrefix}-${i})`}
                   strokeOpacity={0.2}
                   fill="none"
                   strokeWidth={Math.max(1, link.width || 0)}
-                  className="text-foreground transition-[stroke-opacity] duration-200 hover:[stroke-opacity:0.5]"
+                  className="transition-[stroke-opacity] duration-200 hover:[stroke-opacity:0.5]"
                   onMouseEnter={(event) => {
                     const containerRect = svgRef.current?.getBoundingClientRect();
                     const containerLeft = containerRect?.left || 0;
