@@ -1,0 +1,110 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/SankeyChartProps",
+  "definitions": {
+    "SankeyChartProps": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "$ref": "#/definitions/SankeyData"
+        },
+        "width": {
+          "type": "number"
+        },
+        "height": {
+          "type": "number"
+        },
+        "className": {
+          "type": "string"
+        },
+        "colorScheme": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "emptyMessage": {
+          "type": "string",
+          "description": "Rendered in place of the chart when `data` holds no drawable graph."
+        },
+        "ariaLabel": {
+          "type": "string",
+          "description": "Accessible name for the chart. Falls back to a generated summary."
+        },
+        "ariaDescribedby": {
+          "type": "string",
+          "description": "Id of an element elsewhere on the page that describes the chart."
+        },
+        "title": {
+          "type": "string",
+          "description": "Human title rendered into the SVG's `<title>`."
+        },
+        "description": {
+          "type": "string",
+          "description": "Long description rendered into the SVG's `<desc>`. Falls back to a generated one."
+        },
+        "keyboardNavigable": {
+          "type": "boolean",
+          "description": "Set false to make the chart inert to Tab and the arrow keys. Defaults to true."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "SankeyData": {
+      "type": "object",
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SankeyNode"
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SankeyLink"
+          }
+        }
+      },
+      "required": [
+        "nodes",
+        "links"
+      ]
+    },
+    "SankeyNode": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "index": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "SankeyLink": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "number"
+        },
+        "target": {
+          "type": "number"
+        },
+        "value": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "value"
+      ]
+    }
+  }
+}
