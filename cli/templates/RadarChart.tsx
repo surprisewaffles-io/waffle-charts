@@ -3,7 +3,7 @@ import { scaleLinear } from '@visx/scale';
 import { Point } from '@visx/point';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 
 export type RadarChartProps<T> = {
   data: T[];
@@ -67,6 +67,13 @@ function RadarChartContent<T>({
 
   // Dividing by an empty length would make every angle Infinity.
   const angleStep = validData.length ? (Math.PI * 2) / validData.length : 0;
+
+  // Gradient ids must be unique per mounted chart: two RadarCharts on one page
+  // would otherwise both define `radar-gradient`, and every reference in the
+  // document resolves to whichever definition the browser saw first. useId
+  // embeds ':' delimiters, which querySelector and CSS selectors reject, so
+  // they are stripped — the instance counter inside carries the uniqueness.
+  const gradientId = `radar-gradient-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   // Generate grid points
   // 5 concentric circles
@@ -164,10 +171,48 @@ function RadarChartContent<T>({
           })}
 
           {/* The Radar Polygon */}
-          <polygon
-            points={points.map(p => `${p.x},${p.y}`).join(' ')}
-            className={cn("stroke-primary stroke-2 fill-primary/20 hover:opacity-80 transition-opacity", polygonColor)}
-          />
+          {(() => {
+            // A Tailwind class carries no paint value this component can read
+            // into a gradient stop, so those callers keep the flat class fill.
+            const paint = /^(#|rgb|hsl)/.test(polygonColor) ? polygonColor : null;
+            return (
+              <>
+                {paint && (
+                  // Strongest at the centre and thinning toward the outer ring,
+                  // which pulls the eye to the origin the spokes share and
+                  // separates the polygon from the grid behind it.
+                  //
+                  // userSpaceOnUse centres the gradient on the chart origin.
+                  // objectBoundingBox would centre it on the polygon's own
+                  // bounding box, which drifts off-centre whenever the spokes
+                  // are uneven — exactly the case the gradient is meant to read.
+                  <defs>
+                    <radialGradient
+                      id={gradientId}
+                      gradientUnits="userSpaceOnUse"
+                      cx={0}
+                      cy={0}
+                      r={Math.max(1, radius)}
+                    >
+                      <stop offset="0%" stopColor={paint} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={paint} stopOpacity={0.15} />
+                    </radialGradient>
+                  </defs>
+                )}
+                <polygon
+                  points={points.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={paint ? `url(#${gradientId})` : undefined}
+                  stroke={paint ?? undefined}
+                  strokeWidth={paint ? 2 : undefined}
+                  className={cn(
+                    !paint && "stroke-primary stroke-2 fill-primary/20",
+                    "hover:opacity-80 transition-opacity",
+                    !paint && polygonColor,
+                  )}
+                />
+              </>
+            );
+          })()}
 
           {/* Dots on corners */}
           {points.map((p, i) => (

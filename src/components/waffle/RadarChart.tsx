@@ -15,7 +15,7 @@ import {
   MEMOIZED_PERFORMANCE,
   type ChartMetadata,
 } from './metadata-types';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 
 export type RadarChartProps<T> = ChartA11yProps & {
   data: T[];
@@ -86,6 +86,13 @@ function RadarChartContent<T>({
 
   // Dividing by an empty length would make every angle Infinity.
   const angleStep = validData.length ? (Math.PI * 2) / validData.length : 0;
+
+  // Gradient ids must be unique per mounted chart: two RadarCharts on one page
+  // would otherwise both define `radar-gradient`, and every reference in the
+  // document resolves to whichever definition the browser saw first. useId
+  // embeds ':' delimiters, which querySelector and CSS selectors reject, so
+  // they are stripped — the instance counter inside carries the uniqueness.
+  const gradientId = `radar-gradient-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   // Generate grid points
   // 5 concentric circles
@@ -216,14 +223,45 @@ function RadarChartContent<T>({
           {/* The Radar Polygon */}
           {(() => {
             const isHex = !color && (polygonColor.startsWith('#') || polygonColor.startsWith('rgb'));
+            // A Tailwind class carries no paint value this component can read,
+            // so those callers keep the flat `fill-primary/20` class fill.
+            const paint = color || (isHex ? polygonColor : null);
             return (
-              <polygon
-                points={points.map(p => `${p.x},${p.y}`).join(' ')}
-                fill={color ? `${color}33` : isHex ? `${polygonColor}33` : undefined}
-                stroke={color || (isHex ? polygonColor : undefined)}
-                strokeWidth={2}
-                className={cn(!color && !isHex && "stroke-primary stroke-2 fill-primary/20", "hover:opacity-80 transition-opacity", !color && !isHex && polygonColor)}
-              />
+              <>
+                {paint && (
+                  // Strongest at the centre and thinning toward the outer ring,
+                  // which pulls the eye to the origin the spokes share and
+                  // separates the polygon from the grid behind it.
+                  //
+                  // userSpaceOnUse centres the gradient on the chart origin.
+                  // objectBoundingBox would centre it on the polygon's own
+                  // bounding box, which drifts off-centre whenever the spokes
+                  // are uneven — exactly the case the gradient is meant to read.
+                  //
+                  // Opacity rides on the stops rather than on an `RRGGBBAA`
+                  // suffix, so an `rgb()` polygonColor fades too; appending
+                  // "33" to one produced an invalid colour and a black polygon.
+                  <defs>
+                    <radialGradient
+                      id={gradientId}
+                      gradientUnits="userSpaceOnUse"
+                      cx={0}
+                      cy={0}
+                      r={Math.max(1, radius)}
+                    >
+                      <stop offset="0%" stopColor={paint} stopOpacity={0.45} />
+                      <stop offset="100%" stopColor={paint} stopOpacity={0.15} />
+                    </radialGradient>
+                  </defs>
+                )}
+                <polygon
+                  points={points.map(p => `${p.x},${p.y}`).join(' ')}
+                  fill={paint ? `url(#${gradientId})` : undefined}
+                  stroke={paint ?? undefined}
+                  strokeWidth={2}
+                  className={cn(!paint && "stroke-primary stroke-2 fill-primary/20", "hover:opacity-80 transition-opacity", !paint && polygonColor)}
+                />
+              </>
             );
           })()}
 

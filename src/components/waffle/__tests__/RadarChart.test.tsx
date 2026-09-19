@@ -77,6 +77,118 @@ describe('RadarChart', () => {
   });
 });
 
+/**
+ * jsdom's selector engine matches `radialGradient` only as the rightmost part
+ * of a selector, never as an ancestor, so the gradients are selected first and
+ * their stops read by scoping from the element. Real browsers do not need
+ * this; do not fold these back into one selector.
+ */
+const gradientsIn = (container: Element) =>
+  Array.from(container.querySelectorAll('defs radialGradient'));
+
+const stopsOf = (gradient: Element) => Array.from(gradient.querySelectorAll('stop'));
+
+/** The radar polygon is the only one carrying a fill; the grid rings are transparent. */
+const radarPolygon = (container: Element) =>
+  Array.from(container.querySelectorAll('polygon')).find(
+    p => (p.getAttribute('fill') ?? '').startsWith('url('),
+  );
+
+describe('RadarChart polygon gradient', () => {
+  it('fills the polygon from a gradient defined in the same svg', () => {
+    const { container } = render(
+      <RadarChart data={mockData} radiusKey="score" angleKey="subject" polygonColor="#a855f7" />,
+    );
+
+    const polygon = radarPolygon(container);
+    const id = (polygon?.getAttribute('fill') ?? '').match(/^url\(#(.+)\)$/)?.[1];
+    expect(id).toBeTruthy();
+    expect(container.querySelector(`defs > radialGradient[id="${id}"]`)).not.toBeNull();
+  });
+
+  it('centres the gradient on the chart origin rather than the polygon box', () => {
+    const { container } = render(
+      <RadarChart data={mockData} radiusKey="score" angleKey="subject" polygonColor="#a855f7" />,
+    );
+    const [gradient] = gradientsIn(container);
+
+    // The spokes all meet at (0,0) of the translated group. objectBoundingBox
+    // would centre on the polygon's own box, which drifts off that origin
+    // whenever the spokes are uneven — exactly the case the fade is drawn for.
+    expect(gradient.getAttribute('gradientUnits')).toBe('userSpaceOnUse');
+    expect(Number(gradient.getAttribute('cx'))).toBe(0);
+    expect(Number(gradient.getAttribute('cy'))).toBe(0);
+    // width 500 less 80 of margin, height 300 less 80, halved.
+    expect(Number(gradient.getAttribute('r'))).toBe(110);
+  });
+
+  it('runs from a stronger centre to a fainter rim', () => {
+    const { container } = render(
+      <RadarChart data={mockData} radiusKey="score" angleKey="subject" polygonColor="#a855f7" />,
+    );
+    const stops = stopsOf(gradientsIn(container)[0]);
+
+    expect(stops.map(s => s.getAttribute('offset'))).toEqual(['0%', '100%']);
+    expect(stops.map(s => s.getAttribute('stop-color'))).toEqual(['#a855f7', '#a855f7']);
+
+    const centre = Number(stops[0].getAttribute('stop-opacity'));
+    const rim = Number(stops[1].getAttribute('stop-opacity'));
+    expect(centre).toBeGreaterThan(rim);
+    expect(rim).toBeGreaterThan(0);
+  });
+
+  it('takes its paint from the color prop when one is given', () => {
+    const { container } = render(
+      <RadarChart data={mockData} radiusKey="score" angleKey="subject" color="rgb(1, 2, 3)" />,
+    );
+    const stops = stopsOf(gradientsIn(container)[0]);
+
+    // Opacity rides on the stops, not on an `RRGGBBAA` suffix, so an rgb()
+    // colour fades too. Appending "33" to one produced an invalid colour.
+    expect(stops.map(s => s.getAttribute('stop-color'))).toEqual([
+      'rgb(1, 2, 3)',
+      'rgb(1, 2, 3)',
+    ]);
+    expect(radarPolygon(container)?.getAttribute('stroke')).toBe('rgb(1, 2, 3)');
+  });
+
+  it('keeps the flat class fill when polygonColor is a Tailwind class', () => {
+    const { container } = render(
+      <RadarChart
+        data={mockData}
+        radiusKey="score"
+        angleKey="subject"
+        polygonColor="fill-green-500"
+      />,
+    );
+
+    // A class carries no paint value the component can read into a stop, so
+    // those callers keep the existing flat fill rather than a broken gradient.
+    expect(gradientsIn(container)).toHaveLength(0);
+    expect(radarPolygon(container)).toBeUndefined();
+  });
+
+  it('gives two charts on one page disjoint gradient ids', () => {
+    // A shared id would make both charts resolve to whichever <defs> the
+    // browser parsed first, so the second chart would wear the first's colour.
+    const { container } = render(
+      <>
+        <RadarChart data={mockData} radiusKey="score" angleKey="subject" color="#111111" />
+        <RadarChart data={mockData} radiusKey="score" angleKey="subject" color="#222222" />
+      </>,
+    );
+
+    const ids = gradientsIn(container).map(g => g.getAttribute('id'));
+
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+    // querySelector rejects the ':' useId embeds, so the ids must be stripped.
+    for (const id of ids) {
+      expect(id).toMatch(/^[A-Za-z0-9_-]+$/);
+    }
+  });
+});
+
 describe('RadarChart edge-case data', () => {
   // Callers in plain JS can pass anything; the assertion reproduces that
   // without weakening the component's own types.

@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Gradient ribbons in `ChordChart`** — each ribbon now fades from its source
+  group's colour to its target group's, so an exchange reads as leaving one arc
+  and arriving at another instead of borrowing the source's colour outright
+  - One `<linearGradient>` per chord, anchored with `gradientUnits="userSpaceOnUse"`
+    to the two points where the ribbon meets the inner circle
+  - Gradient ids are scoped per mounted chart, so two Chords on a page keep their
+    own colours instead of both resolving to the first `<defs>`
+  - Arc fills, hover isolation, keyboard focus, and tooltips are unchanged
+- **Vertical gradient fills in `AreaChart`** — each stacked band now fades from
+  full strength at its top edge to translucent at the baseline, which gives a
+  stack depth instead of flat slabs
+  - One `<linearGradient>` per series, spanning the whole plot height so every
+    band's fade sits on the same ramp rather than restarting inside each band
+  - Works for both `colors` forms: a paint value goes straight into the stops,
+    and a Tailwind text-colour class is read back through `currentColor`
+  - The colour class now sits on the `<g>` wrapping each band rather than on the
+    band's own `<path>`, because a gradient stop resolves `currentColor` against
+    its own inherited value, not against the element referencing the gradient
+- **Radial gradient fill in `RadarChart`** — the polygon now runs from a stronger
+  centre to a fainter rim, pulling the eye to the origin the spokes share
+  - One `<radialGradient>` centred on the chart origin, not on the polygon's own
+    bounding box, which drifts off-centre whenever the spokes are uneven
+  - Applies when `color` or a paint-value `polygonColor` is given; a Tailwind
+    class `polygonColor` keeps the existing flat `fill-primary/20` fill
 - **Gradient flow ribbons in `SankeyChart`** — each link now fades from its source
   node's colour to its target node's colour, so a flow reads as leaving one column
   and arriving at the next (Solar purple → Grid teal, Grid teal → Industry orange)
@@ -58,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`RadarChart` rendered a black polygon for an `rgb()` colour** — the fill was
+  built by appending `33` to the colour, which makes a valid 8-digit hex out of
+  `#a855f7` but an unparseable value out of `rgb(1, 2, 3)`
+  - Opacity now rides on the gradient's `stop-opacity`, so every accepted colour
+    form fades the same way
 - **`SankeyChart` rendered no link ribbons** — only the node bars appeared
   - The link `<path>` read a `path` property off each laid-out link, but d3-sankey never sets one, so every ribbon rendered with an empty `d`
   - The geometry now comes from `createPath`, the `sankeyLinkHorizontal` generator the visx `Sankey` render prop supplies

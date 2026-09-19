@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useId, useMemo } from 'react';
 import { AreaStack } from '@visx/shape';
 import { Group } from '@visx/group';
 import { scaleTime, scaleLinear } from '@visx/scale';
@@ -26,6 +26,15 @@ type AreaChartContentProps<T> = AreaChartProps<T> & {
   width: number;
   height: number;
 };
+
+/**
+ * Why: `colors` accepts either a paint value or a Tailwind text-colour class,
+ * and the two reach the gradient stops by different routes — a paint value can
+ * be written straight into `stop-color`, while a class only sets `color` and
+ * has to be read back as `currentColor`.
+ * What: True when the entry is a paint value SVG can consume directly.
+ */
+const isPaintValue = (color: string) => /^(#|rgb|hsl)/.test(color);
 
 function AreaChartContent<T>({
   data,
@@ -92,6 +101,13 @@ function AreaChartContent<T>({
   const { containerRef, TooltipInPortal } = useTooltipInPortal({
     scroll: true,
   });
+
+  // Gradient ids must be unique per mounted chart: two AreaCharts on one page
+  // would otherwise both define `area-gradient-0`, and every reference in the
+  // document resolves to whichever definition the browser saw first. useId
+  // embeds ':' delimiters, which querySelector and CSS selectors reject, so
+  // they are stripped — the instance counter inside carries the uniqueness.
+  const gradientPrefix = `area-gradient-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   const bisectDate = bisector<T, Date>(d => getX(d)).left;
 
@@ -171,15 +187,56 @@ function AreaChartContent<T>({
             y1={d => yScale(getY1(d)) ?? 0}
           >
             {({ stacks, path }) =>
-              stacks.map((stack, i) => (
-                <path
-                  key={`stack-${stack.key}`}
-                  d={path(stack) || ''}
-                  stroke="transparent"
-                  // Use currentColor to inherit color from text-class
-                  className={cn("fill-current opacity-80 hover:opacity-100 transition-opacity", colors[i % colors.length])}
-                />
-              ))
+              stacks.map((stack, i) => {
+                const color = colors[i % colors.length];
+                const isPaint = isPaintValue(color);
+                const gradientId = `${gradientPrefix}-${i}`;
+                return (
+                  // The <defs> sit inside this <g> rather than at the svg root
+                  // so that a Tailwind text-colour class on the group sets the
+                  // `color` property the stops read as `currentColor`. A stop
+                  // resolves `currentColor` against its own inherited value,
+                  // never against the element that references the gradient, so
+                  // hoisting these defs out would drop the class series back to
+                  // black.
+                  <g key={`stack-${stack.key}`} className={cn(!isPaint && color)}>
+                    {/* A vertical fade — full strength at the band's top edge,
+                        thinning toward the baseline — so a stacked area reads
+                        with depth instead of as flat slabs. userSpaceOnUse
+                        spans the whole plot height, which keeps every band's
+                        fade on the same ramp; objectBoundingBox would restart
+                        the ramp inside each band and make thin bands look as
+                        dark as tall ones. */}
+                    <defs>
+                      <linearGradient
+                        id={gradientId}
+                        gradientUnits="userSpaceOnUse"
+                        x1={0}
+                        y1={0}
+                        x2={0}
+                        y2={yMax}
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor={isPaint ? color : 'currentColor'}
+                          stopOpacity={0.9}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor={isPaint ? color : 'currentColor'}
+                          stopOpacity={0.3}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d={path(stack) || ''}
+                      stroke="transparent"
+                      fill={`url(#${gradientId})`}
+                      className="opacity-80 hover:opacity-100 transition-opacity"
+                    />
+                  </g>
+                );
+              })
             }
           </AreaStack>
 

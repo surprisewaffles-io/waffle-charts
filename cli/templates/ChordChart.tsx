@@ -4,7 +4,7 @@ import { useTooltip, useTooltipInPortal, defaultStyles } from '@visx/tooltip';
 import { Arc } from '@visx/shape';
 import { ParentSize } from '@visx/responsive';
 import { cn } from '../../lib/utils';
-import { useMemo, useState, useRef } from 'react';
+import { useId, useMemo, useState, useRef } from 'react';
 import { Group } from '@visx/group';
 
 // Types
@@ -22,6 +22,21 @@ export type ChordChartProps = {
 type ChordChartContentProps = ChordChartProps & {
   width: number;
   height: number;
+};
+
+/**
+ * Why: A ribbon's gradient has to run between the two arcs the ribbon joins,
+ * but a chord subgroup is described by angles, not by coordinates.
+ * What: Maps a subgroup's mid-angle to the point where the ribbon meets the
+ * inner circle. d3's chord angles start at 12 o'clock and increase clockwise —
+ * the same convention `d3.arc` uses — so x is sin and y is negative cos.
+ */
+const ribbonAnchor = (
+  subgroup: { startAngle: number; endAngle: number },
+  radius: number,
+) => {
+  const angle = (subgroup.startAngle + subgroup.endAngle) / 2;
+  return { x: radius * Math.sin(angle), y: -radius * Math.cos(angle) };
 };
 
 function ChordChartContent({
@@ -64,6 +79,13 @@ function ChordChartContent({
       }),
     [keys, colorScheme]
   );
+
+  // Gradient ids must be unique per mounted chart: two Chords on one page would
+  // otherwise both define `chord-gradient-0`, and every reference in the
+  // document resolves to whichever definition the browser saw first. useId
+  // embeds ':' delimiters, which querySelector and CSS selectors reject, so
+  // they are stripped — the instance counter inside carries the uniqueness.
+  const gradientPrefix = `chord-gradient-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   // Tooltip
   const {
@@ -112,6 +134,41 @@ function ChordChartContent({
           <Chord matrix={matrix} padAngle={0.05} sortSubgroups={(a, b) => b - a}>
             {({ chords }) => (
               <g>
+                {/* One gradient per ribbon, fading the source group's colour
+                    into the target's so a flow reads as leaving one arc and
+                    arriving at another.
+
+                    userSpaceOnUse anchors the gradient to the ribbon's own two
+                    attachment points. The default (objectBoundingBox) would
+                    measure the ribbon's bounding box, which is axis-aligned and
+                    so points the fade along the wrong diagonal for every chord
+                    that is not horizontal or vertical.
+
+                    These <defs> sit inside the translated <Group>, so the
+                    coordinates are the same centre-origin space the ribbons are
+                    drawn in — userSpaceOnUse resolves against the referencing
+                    element's user space, not the root svg's. */}
+                <defs>
+                  {chords.map((chord, i) => {
+                    const from = ribbonAnchor(chord.source, innerRadius);
+                    const to = ribbonAnchor(chord.target, innerRadius);
+                    return (
+                      <linearGradient
+                        key={`ribbon-gradient-${i}`}
+                        id={`${gradientPrefix}-${i}`}
+                        gradientUnits="userSpaceOnUse"
+                        x1={from.x}
+                        y1={from.y}
+                        x2={to.x}
+                        y2={to.y}
+                      >
+                        <stop offset="0%" stopColor={colorScale(keys[chord.source.index])} />
+                        <stop offset="100%" stopColor={colorScale(keys[chord.target.index])} />
+                      </linearGradient>
+                    );
+                  })}
+                </defs>
+
                 {/* Ribbons */}
                 {chords.groups.map((group, i) => (
                   <Arc
@@ -132,7 +189,7 @@ function ChordChartContent({
                     key={`ribbon-${i}`}
                     chord={chord}
                     radius={innerRadius}
-                    fill={colorScale(keys[chord.source.index])}
+                    fill={`url(#${gradientPrefix}-${i})`}
                     fillOpacity={0.75}
                     className="transition-all duration-200 hover:fill-opacity-100 mix-blend-multiply dark:mix-blend-screen"
                     opacity={
