@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-19
+
 ### Added
 
 - **Gradient ribbons in `ChordChart`** — each ribbon now fades from its source
@@ -174,7 +176,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Visx and Tailwind CSS integration
 - Copy-paste component philosophy
 
-[Unreleased]: https://github.com/surprisewaffles-io/waffle-charts/compare/v0.1.6...HEAD
+[Unreleased]: https://github.com/surprisewaffles-io/waffle-charts/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/surprisewaffles-io/waffle-charts/compare/v0.1.6...v0.2.0
 [0.1.6]: https://github.com/surprisewaffles-io/waffle-charts/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/surprisewaffles-io/waffle-charts/compare/v0.1.0...v0.1.5
 [0.1.0]: https://github.com/surprisewaffles-io/waffle-charts/releases/tag/v0.1.0
